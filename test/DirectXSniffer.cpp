@@ -512,8 +512,6 @@ HRESULT InitDevice()
     }
     {
         for(uint32 i=0; i<_countof(g_sphparticles); ++i) {
-            uint32 zi = i / 128;
-            uint32 xi = i % 128;
             g_sphparticles[i].position = _mm_set_ps(1.0f, GenRand2()*2.0f, GenRand2()*1.0f+2.0f, GenRand2()*2.0f );
             g_sphparticles[i].velocity = _mm_set_ps(0.0f, 0.0f, 0.0f, 0.0f);
         }
@@ -584,12 +582,7 @@ void CleanupDevice()
     if( g_pCubePixelShader ) g_pCubePixelShader->Release();
     if( g_pDepthStencil ) g_pDepthStencil->Release();
     if( g_pDepthStencilView ) g_pDepthStencilView->Release();
-
-    const char c_szName[] = "hogehoge";
-    g_pRenderTargetView->SetPrivateData( WKPDID_D3DDebugObjectName, sizeof( c_szName ) - 1, c_szName );
-    g_pRenderTargetView->AddRef();
     if( g_pRenderTargetView ) g_pRenderTargetView->Release();
-
     if( g_pSwapChain ) g_pSwapChain->Release();
     if( g_pImmediateContext ) g_pImmediateContext->Release();
     if( g_pd3dDevice ) g_pd3dDevice->Release();
@@ -645,11 +638,22 @@ void Render()
     }
 
     {
+        static PerformanceCounter s_timer;
+        static float s_prev = 0.0f;
+        PerformanceCounter timer;
+
         SoAnize(SPH_PARTICLE_NUM, g_sphparticles, g_sphparticles_soa);
         ispc::sphUpdate(SPH_PARTICLE_NUM, g_sphparticles_soa);
         AoSnize(SPH_PARTICLE_NUM, g_sphparticles_soa, g_sphparticles);
 
         g_pImmediateContext->UpdateSubresource( g_pCubeInstanceBuffer, 0, NULL, &g_sphparticles, 0, 0 );
+
+        if(s_timer.getElapsedMillisecond() - s_prev > 2000.0f) {
+            char buf[128];
+            sprintf_s(buf, "  SPH update: %.3fms\n", timer.getElapsedMillisecond());
+            OutputDebugStringA(buf);
+            s_prev = s_timer.getElapsedMillisecond();
+        }
     }
 
     {
@@ -667,33 +671,6 @@ void Render()
         cb.MeshShininess    = 200.0f;
         g_pImmediateContext->UpdateSubresource( g_pCBChangesEveryFrame, 0, NULL, &cb, 0, 0 );
     }
-
-    //{
-    //    FrustumPlanes frustum;
-    //    frustum.constructFromViewProjectionMatrix( g_camera.getViewProjectionMatrix() );
-    //    XMMATRIX roty = XMMatrixRotationY(XMConvertToRadians(10.0f * delta_t));
-    //    for(size_t i=0; i<ARRAYSIZE(g_cubes); ++i) {
-    //        XMVECTOR pos = g_cubes[i].Pos;
-    //        pos = XMVector4Transform(pos, roty);
-    //        g_cubes[i].Pos = pos;
-
-    //        XMVECTOR scale = XMVectorMultiply(g_cubes[i].Scale, XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f));
-    //        AABB aabb( XMVectorSubtract(pos, scale) );
-    //        //aabb.addPoint( XMVectorAdd(pos, scale) );
-    //        //AABB aabb( pos );
-
-    //        if(TestFrustumAABB(frustum, aabb)) {
-    //            g_cubes[i].Color = XMVectorSet(1.0f, 1.0f, 0.0f, 1.0f);
-    //        }
-    //        else {
-    //            g_cubes[i].Color = XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f);
-    //        }
-    //    }
-    //    g_pImmediateContext->UpdateSubresource( g_pCubeInstanceBuffer, 0, NULL, &g_cubes, 0, 0 );
-    //}
-
-    g_pRenderTargetView->AddRef();
-    g_pRenderTargetView->Release();
 
 
     float ClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f }; // red, green, blue, alpha
