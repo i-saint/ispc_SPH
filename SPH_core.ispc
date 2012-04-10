@@ -35,7 +35,7 @@ static inline void ComputeParticleInteraction(
 {
     const uniform float SPH_RCP_PARTICLE_SIZE2 = 1.0f/(SPH_PARTICLE_SIZE*2.0f);
     vec3 diff = pos2 - pos1;
-    float d = length3(diff);
+    float d = length3(diff); // float d = length3est(diff); // ‰½ŒÌ‚© est ‚Ì•û‚ª’x‚­‚È‚é
     if(d > 0.0f) { // d==0: Õ“ËŒ³•Õ“Ë‘Šè‚ª“¯ˆê
         vec3 dir = diff * SPH_RCP_PARTICLE_SIZE2; // vec3 dir = diff / d;
         accel += dir * (-min(0.0f, d-(SPH_PARTICLE_SIZE*2.0f)) * SPH_PARTICLE_STIFFNESS);
@@ -78,6 +78,7 @@ task void UpdateVelocity(
         uniform vec3 vel1 = {particles[i].velx, particles[i].vely, particles[i].velz};
         vec3 accel = {0.0f, 0.0f, 0.0f};
         for(uniform int32 ti=0; ti<particle_num; ti+=programCount) {
+            //prefetch_l1((void * uniform)&all_particles[ti+1]); // ¡‚Ì ispc ‚Í‚±‚ê‚ª‚Å‚«‚È‚¢
             int t = ti+programIndex;
             vec3 pos2 = {all_particles[t].posx, all_particles[t].posy, all_particles[t].posz};
             ComputeParticleInteraction(pos1, pos2, accel);

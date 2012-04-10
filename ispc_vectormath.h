@@ -55,6 +55,18 @@ static inline uniform float length3(uniform vec3 v)
     return sqrt(length_sq3(v));
 }
 
+static inline float length3est(vec3 v)
+{
+    float t = length_sq3(v);
+    return rsqrt(t)*t;
+}
+
+static inline uniform float length3est(uniform vec3 v)
+{
+    uniform float t = length_sq3(v);
+    return rsqrt(t)*t;
+}
+
 
 static inline vec3 normalize3(vec3 v)
 {
