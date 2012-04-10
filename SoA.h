@@ -390,19 +390,19 @@ istForceInline simdvec4 dot3(const soavec34 &v1, const soavec34 &v2) { return v1
 istForceInline simdvec4 dot3(const soavec44 &v1, const soavec44 &v2) { return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2]; }
 istForceInline simdvec4 dot4(const soavec44 &v1, const soavec44 &v2) { return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2] + v1[3]*v2[3]; }
 
-istForceInline simdvec4 length_sq2(soavec24 v1) { return dot2(v1, v1); }
-istForceInline simdvec4 length_sq2(soavec34 v1) { return dot2(v1, v1); }
-istForceInline simdvec4 length_sq2(soavec44 v1) { return dot2(v1, v1); }
-istForceInline simdvec4 length_sq3(soavec34 v1) { return dot3(v1, v1); }
-istForceInline simdvec4 length_sq3(soavec44 v1) { return dot3(v1, v1); }
-istForceInline simdvec4 length_sq4(soavec44 v1) { return dot4(v1, v1); }
+istForceInline simdvec4 length_sq2(const soavec24 &v1) { return dot2(v1, v1); }
+istForceInline simdvec4 length_sq2(const soavec34 &v1) { return dot2(v1, v1); }
+istForceInline simdvec4 length_sq2(const soavec44 &v1) { return dot2(v1, v1); }
+istForceInline simdvec4 length_sq3(const soavec34 &v1) { return dot3(v1, v1); }
+istForceInline simdvec4 length_sq3(const soavec44 &v1) { return dot3(v1, v1); }
+istForceInline simdvec4 length_sq4(const soavec44 &v1) { return dot4(v1, v1); }
 
-istForceInline simdvec4 length2(soavec24 v1) { return sqrt4(dot2(v1, v1)); }
-istForceInline simdvec4 length2(soavec34 v1) { return sqrt4(dot2(v1, v1)); }
-istForceInline simdvec4 length2(soavec44 v1) { return sqrt4(dot2(v1, v1)); }
-istForceInline simdvec4 length3(soavec34 v1) { return sqrt4(dot3(v1, v1)); }
-istForceInline simdvec4 length3(soavec44 v1) { return sqrt4(dot3(v1, v1)); }
-istForceInline simdvec4 length4(soavec44 v1) { return sqrt4(dot4(v1, v1)); }
+istForceInline simdvec4 length2(const soavec24 &v1) { return sqrt4(dot2(v1, v1)); }
+istForceInline simdvec4 length2(const soavec34 &v1) { return sqrt4(dot2(v1, v1)); }
+istForceInline simdvec4 length2(const soavec44 &v1) { return sqrt4(dot2(v1, v1)); }
+istForceInline simdvec4 length3(const soavec34 &v1) { return sqrt4(dot3(v1, v1)); }
+istForceInline simdvec4 length3(const soavec44 &v1) { return sqrt4(dot3(v1, v1)); }
+istForceInline simdvec4 length4(const soavec44 &v1) { return sqrt4(dot4(v1, v1)); }
 
 
 } // namespace ist
