@@ -152,9 +152,7 @@ ID3D11Buffer*                       g_pCBChangesEveryFrame = NULL;
 XMFLOAT4                            g_vMeshColor( 0.7f, 0.7f, 0.7f, 1.0f );
 PerspectiveCamera                   g_camera;
 
-const uint32 SPH_PARTICLE_NUM = 64*64;
-sphParticle                         g_sphparticles[SPH_PARTICLE_NUM];
-ispc::Particle_SOA8                 g_sphparticles_soa[SPH_PARTICLE_NUM/8];
+sphGrid                             g_sphgrid;
 
 
 // 0.0f-1.0f
@@ -511,11 +509,7 @@ HRESULT InitDevice()
         g_pCubeVertexBuffer = CreateVertexBuffer(vertices, sizeof(SimpleVertex)*ARRAYSIZE(vertices));
     }
     {
-        for(uint32 i=0; i<_countof(g_sphparticles); ++i) {
-            g_sphparticles[i].position = _mm_set_ps(1.0f, GenRand2()*2.0f, GenRand2()*1.0f+2.0f, GenRand2()*2.0f );
-            g_sphparticles[i].velocity = _mm_set_ps(0.0f, 0.0f, 0.0f, 0.0f);
-        }
-        g_pCubeInstanceBuffer = CreateVertexBuffer(g_sphparticles, sizeof(sphParticle) * ARRAYSIZE(g_sphparticles));
+        g_pCubeInstanceBuffer = CreateVertexBuffer(g_sphgrid.particles, sizeof(sphParticle) * SPH_MAX_PARTICLE_NUM);
     }
 
     // Create index buffer
@@ -642,11 +636,8 @@ void Render()
         static float s_prev = 0.0f;
         PerformanceCounter timer;
 
-        SoAnize(SPH_PARTICLE_NUM, g_sphparticles, g_sphparticles_soa);
-        ispc::sphUpdate(SPH_PARTICLE_NUM, g_sphparticles_soa);
-        AoSnize(SPH_PARTICLE_NUM, g_sphparticles_soa, g_sphparticles);
-
-        g_pImmediateContext->UpdateSubresource( g_pCubeInstanceBuffer, 0, NULL, &g_sphparticles, 0, 0 );
+        g_sphgrid.update();
+        g_pImmediateContext->UpdateSubresource( g_pCubeInstanceBuffer, 0, NULL, &g_sphgrid.particles, 0, 0 );
 
         if(s_timer.getElapsedMillisecond() - s_prev > 2000.0f) {
             char buf[128];
@@ -692,7 +683,7 @@ void Render()
     g_pImmediateContext->VSSetConstantBuffers( 0, 1, &g_pCBChangesEveryFrame );
     g_pImmediateContext->PSSetShader( g_pCubePixelShader, NULL, 0 );
     g_pImmediateContext->PSSetConstantBuffers( 0, 1, &g_pCBChangesEveryFrame );
-    g_pImmediateContext->DrawIndexedInstanced( 36, ARRAYSIZE(g_sphparticles), 0, 0, 0 );
+    g_pImmediateContext->DrawIndexedInstanced( 36, SPH_MAX_PARTICLE_NUM, 0, 0, 0 );
 
     // Present our back buffer to our front buffer
     g_pSwapChain->Present( 0, 0 );

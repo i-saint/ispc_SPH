@@ -6,6 +6,7 @@
 #include "SoA.h"
 typedef int int32;
 typedef unsigned int uint32;
+typedef float float32;
 
 using ist::simdvec4;
 using ist::simdvec8;
@@ -13,14 +14,15 @@ using ist::soavec24;
 using ist::soavec34;
 using ist::soavec44;
 
+__declspec(align(16)) 
 struct sphParticle
 {
     simdvec4 position;
     simdvec4 velocity;
     union {
         struct {
-            float energy;
-            float density;
+            float32 energy;
+            float32 density;
             uint32 hash;
             uint32 dummy[1];
         } params;
@@ -28,8 +30,26 @@ struct sphParticle
     };
 };
 
-void SoAnize(uint32 num, const sphParticle *particles, ispc::Particle_SOA8 *out);
-void AoSnize(uint32 num, const ispc::Particle_SOA8 *particles, sphParticle *out);
+__declspec(align(16)) 
+struct sphGrid
+{
+    __declspec(align(16)) 
+    struct sphGridData
+    {
+        int32 index_begin;
+        int32 index_end;
+        float32 density;
+        uint32 dummy[1];
+    };
+
+    sphParticle particles[SPH_MAX_PARTICLE_NUM];
+    ispc::Particle_SOA8 particles_soa[SPH_MAX_PARTICLE_NUM/8 + SPH_GRID_CELL_NUM];
+    sphGridData cell[SPH_GRID_CELL_NUM];
+
+    sphGrid();
+    void update();
+};
+
 
 
 #endif // _SPH_types_h_

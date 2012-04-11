@@ -38,7 +38,7 @@ static inline void ComputeParticleInteraction(
     float d = length3(diff); // float d = length3est(diff); // 何故か est の方が遅くなる
     if(d > 0.0f) { // d==0: 衝突元＆衝突相手が同一
         vec3 dir = diff * SPH_RCP_PARTICLE_SIZE2; // vec3 dir = diff / d;
-        accel += dir * (-min(0.0f, d-(SPH_PARTICLE_SIZE*2.0f)) * SPH_PARTICLE_STIFFNESS);
+        accel += dir * (min(0.0f, d-(SPH_PARTICLE_SIZE*2.0f)) * SPH_PARTICLE_STIFFNESS);
     }
 }
 
@@ -49,16 +49,20 @@ static inline void ComputeGravity(
     // x,y,z=0,0,0 で半径 CENTER_SPHERE_RADIUS の球があるもんとして重力で引っ張る＆衝突判定
 
     const uniform float CENTER_SPHERE_RADIUS = 1.5f;
-    const uniform float GRAVITY = -0.002f;
+    const uniform float GRAVITY = 0.002f;
+    const uniform float DECELERATE = 0.997;
 
     // 中心の球との衝突判定
-    uniform vec3 diff = pos1;
+    uniform vec3 diff = -pos1;
     uniform float d = length3(diff);
     uniform vec3 dir = diff / d;
-    vel1 += dir * (-min(0.0f, d-CENTER_SPHERE_RADIUS) * SPH_PARTICLE_STIFFNESS);
+    vel1 += dir * (min(0.0f, d-CENTER_SPHERE_RADIUS) * SPH_PARTICLE_STIFFNESS);
 
     // 重力加速
     vel1 += dir * GRAVITY;
+
+    // 自然減速
+    vel1 *= DECELERATE;
 }
 
 task void UpdateVelocity(

@@ -15,8 +15,10 @@
 
 namespace ist {
 
-typedef __m128 simdvec4;
-typedef __m256 simdvec8;
+typedef __m128  simdvec4;
+typedef __m128i simdvec4i;
+typedef __m256  simdvec8;
+typedef __m256i simdvec8i;
 
 #ifndef __XNAMATH_H__
 istForceInline simdvec4 operator+(simdvec4 a, simdvec4 b) { return _mm_add_ps(a, b); }
@@ -24,12 +26,29 @@ istForceInline simdvec4 operator-(simdvec4 a, simdvec4 b) { return _mm_sub_ps(a,
 istForceInline simdvec4 operator*(simdvec4 a, simdvec4 b) { return _mm_mul_ps(a, b); }
 istForceInline simdvec4 operator/(simdvec4 a, simdvec4 b) { return _mm_div_ps(a, b); }
 #endif // __XNAMATH_H__
+istForceInline simdvec4i operator+(simdvec4i a, simdvec4i b) { return _mm_add_epi32(a, b); }
+istForceInline simdvec4i operator-(simdvec4i a, simdvec4i b) { return _mm_sub_epi32(a, b); }
+istForceInline simdvec4i operator*(simdvec4i a, simdvec4i b) { return _mm_mul_epi32(a, b); }
+
 istForceInline simdvec4& operator+=(simdvec4 &a, simdvec4 b) { return (a = a + b); }
 istForceInline simdvec4& operator-=(simdvec4 &a, simdvec4 b) { return (a = a - b); }
 istForceInline simdvec4& operator*=(simdvec4 &a, simdvec4 b) { return (a = a * b); }
 istForceInline simdvec4& operator/=(simdvec4 &a, simdvec4 b) { return (a = a / b); }
+istForceInline simdvec4i& operator+=(simdvec4i &a, simdvec4i b) { return (a = a + b); }
+istForceInline simdvec4i& operator-=(simdvec4i &a, simdvec4i b) { return (a = a - b); }
+istForceInline simdvec4i& operator*=(simdvec4i &a, simdvec4i b) { return (a = a * b); }
+
+istForceInline simdvec8 operator+(simdvec8 a, simdvec8 b) { return _mm256_add_ps(a, b); }
+istForceInline simdvec8 operator-(simdvec8 a, simdvec8 b) { return _mm256_sub_ps(a, b); }
+istForceInline simdvec8 operator*(simdvec8 a, simdvec8 b) { return _mm256_mul_ps(a, b); }
+istForceInline simdvec8 operator/(simdvec8 a, simdvec8 b) { return _mm256_div_ps(a, b); }
+istForceInline simdvec8& operator+=(simdvec8 &a, simdvec8 b) { return (a = a + b); }
+istForceInline simdvec8& operator-=(simdvec8 &a, simdvec8 b) { return (a = a - b); }
+istForceInline simdvec8& operator*=(simdvec8 &a, simdvec8 b) { return (a = a * b); }
+istForceInline simdvec8& operator/=(simdvec8 &a, simdvec8 b) { return (a = a / b); }
 
 istForceInline simdvec4 simdvec4_set(float x, float y, float z, float w) { return _mm_set_ps(w, z, y, x); }
+istForceInline simdvec4i simdvec4_seti(int x, int y, int z, int w) { return _mm_set_epi32(w, z, y, x); }
 
 istForceInline simdvec4 reduce_add4(simdvec4 v1)
 {
