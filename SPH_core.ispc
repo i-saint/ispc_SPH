@@ -48,7 +48,7 @@ static inline void ComputeGravity(
 {
     // x,y,z=0,0,0 で半径 CENTER_SPHERE_RADIUS の球があるもんとして重力で引っ張る＆衝突判定
 
-    const uniform float CENTER_SPHERE_RADIUS = 1.5f;
+    const uniform float CENTER_SPHERE_RADIUS = 1.0f;
     const uniform float GRAVITY = 0.002f;
     const uniform float DECELERATE = 0.997;
 
@@ -65,7 +65,7 @@ static inline void ComputeGravity(
     vel1 *= DECELERATE;
 }
 
-task void UpdateVelocity(
+void UpdateVelocity(
     uniform int32 particle_num,
     soa<8> Particle all_particles[] )
 {
@@ -73,8 +73,8 @@ task void UpdateVelocity(
     // 適切にマージンを設けてあるという前提の元に無視します。
     // (foreach(i=0 ... particle_num) だと突き抜けないように適切に対処してくれますが、若干コストを伴うため、敢えてこうします)
 
-    uniform int32 beg = SPH_FLUID_BLOCK_SIZE * taskIndex;
-    uniform int32 end = min(SPH_FLUID_BLOCK_SIZE, particle_num-beg);
+    uniform int32 beg = 0;
+    uniform int32 end = particle_num;
     soa<8> Particle * uniform particles = &all_particles[beg];
 
     for(uniform int32 i=0; i<end; ++i) {
@@ -99,12 +99,12 @@ task void UpdateVelocity(
     }
 }
 
-task void Integrate(
+void Integrate(
     uniform int32 particle_num,
     soa<8> Particle all_particles[] )
 {
-    uniform int32 beg = SPH_FLUID_BLOCK_SIZE * taskIndex;
-    uniform int32 end = min(SPH_FLUID_BLOCK_SIZE, particle_num-beg);
+    uniform int32 beg = 0;
+    uniform int32 end = particle_num;
     soa<8> Particle * uniform particles = &all_particles[beg];
 
     for(uniform int pi=0; pi<end; pi+=programCount) {
@@ -123,8 +123,6 @@ export void sphUpdate(
     soa<8> Particle particles[] )
 {
     const uniform int32 block_num = sphFluidBlockNum(particle_num);
-    launch[block_num] UpdateVelocity(particle_num, particles);
-    sync;
-    launch[block_num] Integrate(particle_num, particles);
-    sync;
+    UpdateVelocity(particle_num, particles);
+    Integrate(particle_num, particles);
 }

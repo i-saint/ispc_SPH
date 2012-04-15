@@ -36,15 +36,15 @@ struct sphGrid
     __declspec(align(16)) 
     struct sphGridData
     {
-        int32 index_begin;
-        int32 index_end;
+        int32 x;
+        int32 y;
+        int32 soa;
         float32 density;
-        uint32 dummy[1];
     };
 
     sphParticle particles[SPH_MAX_PARTICLE_NUM];
     ispc::Particle_SOA8 particles_soa[SPH_MAX_PARTICLE_NUM/8 + SPH_GRID_CELL_NUM];
-    sphGridData cell[SPH_GRID_CELL_NUM];
+    sphGridData cell[SPH_GRID_DIV][SPH_GRID_DIV];
 
     sphGrid();
     void update();

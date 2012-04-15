@@ -12,8 +12,8 @@
 #include <xnamath.h>
 #include <cstdio>
 #include "resource.h"
+#include <tbb/tbb.h>
 
-#define D3D11LEAKCHECKER_ENABLE
 
 #include "../SPH_types.h"
 #include "SPH_core_ispc.h"
@@ -179,6 +179,7 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 {
     UNREFERENCED_PARAMETER( hPrevInstance );
     UNREFERENCED_PARAMETER( lpCmdLine );
+    tbb::task_scheduler_init::automatic;
 
     if( FAILED( InitWindow( hInstance, nCmdShow ) ) )
         return 0;
@@ -360,7 +361,6 @@ HRESULT InitDevice()
     }
     if( FAILED( hr ) )
         return hr;
-
 
     // Create a render target view
     ID3D11Texture2D* pBackBuffer = NULL;
@@ -683,6 +683,7 @@ void Render()
     g_pImmediateContext->VSSetConstantBuffers( 0, 1, &g_pCBChangesEveryFrame );
     g_pImmediateContext->PSSetShader( g_pCubePixelShader, NULL, 0 );
     g_pImmediateContext->PSSetConstantBuffers( 0, 1, &g_pCBChangesEveryFrame );
+
     g_pImmediateContext->DrawIndexedInstanced( 36, SPH_MAX_PARTICLE_NUM, 0, 0, 0 );
 
     // Present our back buffer to our front buffer
