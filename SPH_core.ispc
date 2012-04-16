@@ -65,7 +65,7 @@ static inline void ComputeGravity(
     vel1 *= DECELERATE;
 }
 
-void UpdateVelocity(
+export void sphUpdateVelocity(
     uniform int32 particle_num,
     soa<8> Particle all_particles[] )
 {
@@ -81,9 +81,8 @@ void UpdateVelocity(
         uniform vec3 pos1 = {particles[i].posx, particles[i].posy, particles[i].posz};
         uniform vec3 vel1 = {particles[i].velx, particles[i].vely, particles[i].velz};
         vec3 accel = {0.0f, 0.0f, 0.0f};
-        for(uniform int32 ti=0; ti<particle_num; ti+=programCount) {
+        foreach(t=0 ... particle_num) {
             //prefetch_l1((void * uniform)&all_particles[ti+1]); // ¡‚Ì ispc ‚Í‚±‚ê‚ª‚Å‚«‚È‚¢
-            int t = ti+programIndex;
             vec3 pos2 = {all_particles[t].posx, all_particles[t].posy, all_particles[t].posz};
             ComputeParticleInteraction(pos1, pos2, accel);
         }
@@ -99,16 +98,11 @@ void UpdateVelocity(
     }
 }
 
-void Integrate(
+export void sphIntegrate(
     uniform int32 particle_num,
-    soa<8> Particle all_particles[] )
+    soa<8> Particle particles[] )
 {
-    uniform int32 beg = 0;
-    uniform int32 end = particle_num;
-    soa<8> Particle * uniform particles = &all_particles[beg];
-
-    for(uniform int pi=0; pi<end; pi+=programCount) {
-        int i = pi+programIndex;
+    foreach(i=0 ... particle_num) {
         vec3 pos = {particles[i].posx, particles[i].posy, particles[i].posz};
         vec3 vel = {particles[i].velx, particles[i].vely, particles[i].velz};
         pos += vel;
@@ -116,13 +110,4 @@ void Integrate(
         particles[i].posy = pos.y;
         particles[i].posz = pos.z;
     }
-}
-
-export void sphUpdate(
-    uniform int32 particle_num,
-    soa<8> Particle particles[] )
-{
-    const uniform int32 block_num = sphFluidBlockNum(particle_num);
-    UpdateVelocity(particle_num, particles);
-    Integrate(particle_num, particles);
 }

@@ -175,7 +175,17 @@ void sphGrid::update()
                 int32 n = ce[i].y - ce[i].x;
                 if(n > 0) {
                     ispc::Particle_SOA8 *t = &so[ce[i].soa];
-                    ispc::sphUpdate(n, t);
+                    ispc::sphUpdateVelocity(n, t);
+                }
+            }
+    });
+    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 32),
+        [ce, so](const tbb::blocked_range<int> &r) {
+            for(int i=r.begin(); i!=r.end(); ++i) {
+                int32 n = ce[i].y - ce[i].x;
+                if(n > 0) {
+                    ispc::Particle_SOA8 *t = &so[ce[i].soa];
+                    ispc::sphIntegrate(n, t);
                 }
             }
     });
