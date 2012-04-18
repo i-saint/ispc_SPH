@@ -14,6 +14,10 @@ using ist::soavec24;
 using ist::soavec34;
 using ist::soavec44;
 
+typedef ispc::Particle_SOA8 sphParticleSOA8;
+typedef ispc::GridData sphGridData;
+typedef sphGridData (sphGridDataArray2D)[SPH_GRID_DIV][SPH_GRID_DIV];
+
 __declspec(align(16)) 
 struct sphParticle
 {
@@ -33,17 +37,8 @@ struct sphParticle
 __declspec(align(16)) 
 struct sphGrid
 {
-    __declspec(align(16)) 
-    struct sphGridData
-    {
-        int32 x;
-        int32 y;
-        int32 soa;
-        float32 density;
-    };
-
     sphParticle particles[SPH_MAX_PARTICLE_NUM];
-    ispc::Particle_SOA8 particles_soa[SPH_MAX_PARTICLE_NUM/8 + SPH_GRID_CELL_NUM];
+    sphParticleSOA8 particles_soa[SPH_MAX_PARTICLE_NUM/8 + SPH_GRID_CELL_NUM];
     sphGridData cell[SPH_GRID_DIV][SPH_GRID_DIV];
 
     sphGrid();

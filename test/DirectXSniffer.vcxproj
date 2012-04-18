@@ -388,6 +388,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ispc %(FullPath) -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=sse2,sse4,avx --arch=x86-64 --opt=fast-masked-vload --opt=fast-math</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">ispc %(FullPath) -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=sse2,sse4,avx --arch=x86-64 --opt=fast-masked-vload --opt=fast-math</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">SPH_const.h</AdditionalInputs>
     </CustomBuild>
     <None Include="Tutorial07.fx" />
   </ItemGroup>
