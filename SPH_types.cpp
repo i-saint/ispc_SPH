@@ -21,24 +21,30 @@ void SoAnize( int32 num, const sphParticle *particles, ispc::Particle_SOA8 *out 
     int32 blocks = soa_blocks(num);
     for(int32 bi=0; bi<blocks; ++bi) {
         int32 i = SIMD_LANES*bi;
-        ist::soavec34 soa;
-        soa = ist::soa_transpose34(particles[i+0].position, particles[i+1].position, particles[i+2].position, particles[i+3].position);
-        _mm_store_ps(out[bi].posx+0, soa.x());
-        _mm_store_ps(out[bi].posy+0, soa.y());
-        _mm_store_ps(out[bi].posz+0, soa.z());
-        soa = ist::soa_transpose34(particles[i+0].velocity, particles[i+1].velocity, particles[i+2].velocity, particles[i+3].velocity);
-        _mm_store_ps(out[bi].velx+0, soa.x());
-        _mm_store_ps(out[bi].vely+0, soa.y());
-        _mm_store_ps(out[bi].velz+0, soa.z());
+        ist::soavec34 soav;
+        simdvec4 soas;
+        soav = ist::soa_transpose34(particles[i+0].position, particles[i+1].position, particles[i+2].position, particles[i+3].position);
+        _mm_store_ps(out[bi].posx+0, soav.x());
+        _mm_store_ps(out[bi].posy+0, soav.y());
+        _mm_store_ps(out[bi].posz+0, soav.z());
+        soav = ist::soa_transpose34(particles[i+0].velocity, particles[i+1].velocity, particles[i+2].velocity, particles[i+3].velocity);
+        _mm_store_ps(out[bi].velx+0, soav.x());
+        _mm_store_ps(out[bi].vely+0, soav.y());
+        _mm_store_ps(out[bi].velz+0, soav.z());
 
-        soa = ist::soa_transpose34(particles[i+4].position, particles[i+5].position, particles[i+6].position, particles[i+7].position);
-        _mm_store_ps(out[bi].posx+4, soa.x());
-        _mm_store_ps(out[bi].posy+4, soa.y());
-        _mm_store_ps(out[bi].posz+4, soa.z());
-        soa = ist::soa_transpose34(particles[i+4].velocity, particles[i+5].velocity, particles[i+6].velocity, particles[i+7].velocity);
-        _mm_store_ps(out[bi].velx+4, soa.x());
-        _mm_store_ps(out[bi].vely+4, soa.y());
-        _mm_store_ps(out[bi].velz+4, soa.z());
+        soav = ist::soa_transpose34(particles[i+4].position, particles[i+5].position, particles[i+6].position, particles[i+7].position);
+        _mm_store_ps(out[bi].posx+4, soav.x());
+        _mm_store_ps(out[bi].posy+4, soav.y());
+        _mm_store_ps(out[bi].posz+4, soav.z());
+        soav = ist::soa_transpose34(particles[i+4].velocity, particles[i+5].velocity, particles[i+6].velocity, particles[i+7].velocity);
+        _mm_store_ps(out[bi].velx+4, soav.x());
+        _mm_store_ps(out[bi].vely+4, soav.y());
+        _mm_store_ps(out[bi].velz+4, soav.z());
+
+        soas = ist::simdvec4_set(particles[i+0].params.density, particles[i+1].params.density, particles[i+2].params.density, particles[i+3].params.density);
+        _mm_store_ps(out[bi].density+0, soas);
+        soas = ist::simdvec4_set(particles[i+4].params.density, particles[i+5].params.density, particles[i+6].params.density, particles[i+7].params.density);
+        _mm_store_ps(out[bi].density+4, soas);
     }
 }
 
@@ -76,6 +82,7 @@ void AoSnize( int32 num, const ispc::Particle_SOA8 *particles, sphParticle *out 
         for(int32 ei=0; ei<e; ++ei) {
             out[i+ei].position = aos_pos[ei/4][ei%4];
             out[i+ei].velocity = aos_vel[ei/4][ei%4];
+            out[i+ei].params.density = particles[bi].density[ei];
         }
     }
 }
@@ -98,11 +105,13 @@ sphGrid::sphGrid()
 {
     for(uint32 i=0; i<_countof(particles); ++i) {
         particles[i].position = ist::simdvec4_set(
-            SPH_PARTICLE_SIZE*2.0f * (i % (SPH_GRID_DIV*2)),
-            SPH_PARTICLE_SIZE*2.0f * (i / (SPH_GRID_DIV*4)),
-            SPH_PARTICLE_SIZE * (i / (SPH_GRID_DIV*2)) - 5.12f,
+            SPH_PARTICLE_SIZE*0.5f * (i % (SPH_GRID_DIV*2)) + 0.5f,
+            SPH_PARTICLE_SIZE*0.5f * (i / (SPH_GRID_DIV*4)) + 0.5f,
+            SPH_PARTICLE_SIZE*0.5f * (i / (SPH_GRID_DIV*2)) - 0.5f,
+            //0.0f,
             1.0f );
         particles[i].velocity = ist::simdvec4_set(0.0f, 0.0f, 0.0f, 0.0f);
+        particles[i].params.density = 0.0f;
     }
 }
 
@@ -168,6 +177,42 @@ void sphGrid::update()
             }
     });
 
+    //// SPH
+    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+    //    [ce, so](const tbb::blocked_range<int> &r) {
+    //        for(int i=r.begin(); i!=r.end(); ++i) {
+    //            int32 n = ce[i].y - ce[i].x;
+    //            if(n > 0) {
+    //                int xi, yi;
+    //                GenIndex(i, xi, yi);
+    //                ispc::sphUpdateDensity(so, ce, xi, yi);
+    //            }
+    //        }
+    //});
+    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+    //    [ce, so](const tbb::blocked_range<int> &r) {
+    //        for(int i=r.begin(); i!=r.end(); ++i) {
+    //            int32 n = ce[i].y - ce[i].x;
+    //            if(n > 0) {
+    //                int xi, yi;
+    //                GenIndex(i, xi, yi);
+    //                ispc::sphUpdateForce(so, ce, xi, yi);
+    //            }
+    //        }
+    //});
+    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+    //    [ce, so](const tbb::blocked_range<int> &r) {
+    //        for(int i=r.begin(); i!=r.end(); ++i) {
+    //            int32 n = ce[i].y - ce[i].x;
+    //            if(n > 0) {
+    //                int xi, yi;
+    //                GenIndex(i, xi, yi);
+    //                ispc::sphIntegrate(so, ce, xi, yi);
+    //            }
+    //        }
+    //});
+
+    // impulse
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
         [ce, so](const tbb::blocked_range<int> &r) {
             for(int i=r.begin(); i!=r.end(); ++i) {
@@ -175,7 +220,7 @@ void sphGrid::update()
                 if(n > 0) {
                     int xi, yi;
                     GenIndex(i, xi, yi);
-                    ispc::sphUpdateVelocity(so, ce, xi, yi);
+                    ispc::impUpdateVelocity(so, ce, xi, yi);
                 }
             }
     });
@@ -186,7 +231,7 @@ void sphGrid::update()
                 if(n > 0) {
                     int xi, yi;
                     GenIndex(i, xi, yi);
-                    ispc::sphIntegrate(so, ce, xi, yi);
+                    ispc::impIntegrate(so, ce, xi, yi);
                 }
             }
     });

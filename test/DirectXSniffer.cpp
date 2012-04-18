@@ -180,6 +180,7 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
     UNREFERENCED_PARAMETER( hPrevInstance );
     UNREFERENCED_PARAMETER( lpCmdLine );
     tbb::task_scheduler_init::automatic;
+    ispc::sphInitializeConstants();
 
     if( FAILED( InitWindow( hInstance, nCmdShow ) ) )
         return 0;

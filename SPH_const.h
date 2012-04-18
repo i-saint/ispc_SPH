@@ -1,11 +1,12 @@
 #ifndef _SPH_const_h_
 #define _SPH_const_h_
 
-#define SPH_PARTICLE_SIZE 0.02f
-#define SPH_PARTICLE_STIFFNESS 0.5f
+#define SPH_PARTICLE_SIZE 0.04f
 
 //#define SPH_MAX_PARTICLE_NUM 131072
 #define SPH_MAX_PARTICLE_NUM 65536
+//#define SPH_MAX_PARTICLE_NUM 32768
+//#define SPH_MAX_PARTICLE_NUM 16384
 
 #define SPH_GRID_SIZE 10.24
 #define SPH_GRID_POS -10.24
