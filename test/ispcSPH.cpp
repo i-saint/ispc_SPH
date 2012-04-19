@@ -229,16 +229,16 @@ HRESULT InitWindow( HINSTANCE hInstance, int nCmdShow )
     wcex.hCursor = LoadCursor( NULL, IDC_ARROW );
     wcex.hbrBackground = ( HBRUSH )( COLOR_WINDOW + 1 );
     wcex.lpszMenuName = NULL;
-    wcex.lpszClassName = L"TutorialWindowClass";
+    wcex.lpszClassName = L"ispc_SPH_class";
     wcex.hIconSm = LoadIcon( wcex.hInstance, ( LPCTSTR )IDI_TUTORIAL1 );
     if( !RegisterClassEx( &wcex ) )
         return E_FAIL;
 
     // Create window
     g_hInst = hInstance;
-    RECT rc = { 0, 0, 640, 480 };
+    RECT rc = { 0, 0, 1024, 768 };
     AdjustWindowRect( &rc, WS_OVERLAPPEDWINDOW, FALSE );
-    g_hWnd = CreateWindow( L"TutorialWindowClass", L"Direct3D 11 Tutorial 7", WS_OVERLAPPEDWINDOW,
+    g_hWnd = CreateWindow( L"ispc_SPH_class", L"ispc test", WS_OVERLAPPEDWINDOW,
                            CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, NULL, NULL, hInstance,
                            NULL );
     if( !g_hWnd )
@@ -555,7 +555,7 @@ HRESULT InitDevice()
 
     // camera
     g_camera.setProjection( XMConvertToRadians(45.0f), width / (FLOAT)height, 0.1f, 100.0f );
-    g_camera.setView(XMVectorSet( 0.0f, 7.0f, -10.0f, 0.0f ), XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f ), XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f ));
+    g_camera.setView(XMVectorSet( 0.0f, 7.0f, -12.5f, 0.0f ), XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f ), XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f ));
 
     return S_OK;
 }

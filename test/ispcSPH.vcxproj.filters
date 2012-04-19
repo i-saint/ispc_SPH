@@ -9,15 +9,15 @@
       <UniqueIdentifier>{2c3d4c8c-5d1a-459a-a05a-a4e4b608a44e}</UniqueIdentifier>
       <Extensions>fx;fxh;hlsl</Extensions>
     </Filter>
-    <Filter Include="ispc_SPH">
+    <Filter Include="SPH">
       <UniqueIdentifier>{b0fb3b64-e40e-4682-9652-9c4611ed7e91}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tasksys.cpp" />
-    <ClCompile Include="DirectXSniffer.cpp" />
+    <ClCompile Include="ispcSPH.cpp" />
     <ClCompile Include="..\SPH_types.cpp">
-      <Filter>ispc_SPH</Filter>
+      <Filter>SPH</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -30,26 +30,26 @@
       <Filter>Resource Files</Filter>
     </CLInclude>
     <ClInclude Include="..\ispc_vectormath.h">
-      <Filter>ispc_SPH</Filter>
+      <Filter>SPH</Filter>
     </ClInclude>
     <ClInclude Include="..\SoA.h">
-      <Filter>ispc_SPH</Filter>
+      <Filter>SPH</Filter>
     </ClInclude>
     <ClInclude Include="..\SPH_const.h">
-      <Filter>ispc_SPH</Filter>
+      <Filter>SPH</Filter>
     </ClInclude>
     <ClInclude Include="..\SPH_types.h">
-      <Filter>ispc_SPH</Filter>
+      <Filter>SPH</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="DirectXSniffer.rc">
+    <ResourceCompile Include="ispcSPH.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\SPH_core.ispc">
-      <Filter>ispc_SPH</Filter>
+      <Filter>SPH</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>
