@@ -177,64 +177,64 @@ void sphGrid::update()
             }
     });
 
-    //// SPH
-    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-    //    [ce, so](const tbb::blocked_range<int> &r) {
-    //        for(int i=r.begin(); i!=r.end(); ++i) {
-    //            int32 n = ce[i].y - ce[i].x;
-    //            if(n > 0) {
-    //                int xi, yi;
-    //                GenIndex(i, xi, yi);
-    //                ispc::sphUpdateDensity(so, ce, xi, yi);
-    //            }
-    //        }
-    //});
-    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-    //    [ce, so](const tbb::blocked_range<int> &r) {
-    //        for(int i=r.begin(); i!=r.end(); ++i) {
-    //            int32 n = ce[i].y - ce[i].x;
-    //            if(n > 0) {
-    //                int xi, yi;
-    //                GenIndex(i, xi, yi);
-    //                ispc::sphUpdateForce(so, ce, xi, yi);
-    //            }
-    //        }
-    //});
-    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-    //    [ce, so](const tbb::blocked_range<int> &r) {
-    //        for(int i=r.begin(); i!=r.end(); ++i) {
-    //            int32 n = ce[i].y - ce[i].x;
-    //            if(n > 0) {
-    //                int xi, yi;
-    //                GenIndex(i, xi, yi);
-    //                ispc::sphIntegrate(so, ce, xi, yi);
-    //            }
-    //        }
-    //});
+    // SPH
+    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+        [ce, so](const tbb::blocked_range<int> &r) {
+            for(int i=r.begin(); i!=r.end(); ++i) {
+                int32 n = ce[i].y - ce[i].x;
+                if(n > 0) {
+                    int xi, yi;
+                    GenIndex(i, xi, yi);
+                    ispc::sphUpdateDensity(so, ce, xi, yi);
+                }
+            }
+    });
+    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+        [ce, so](const tbb::blocked_range<int> &r) {
+            for(int i=r.begin(); i!=r.end(); ++i) {
+                int32 n = ce[i].y - ce[i].x;
+                if(n > 0) {
+                    int xi, yi;
+                    GenIndex(i, xi, yi);
+                    ispc::sphUpdateForce(so, ce, xi, yi);
+                }
+            }
+    });
+    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+        [ce, so](const tbb::blocked_range<int> &r) {
+            for(int i=r.begin(); i!=r.end(); ++i) {
+                int32 n = ce[i].y - ce[i].x;
+                if(n > 0) {
+                    int xi, yi;
+                    GenIndex(i, xi, yi);
+                    ispc::sphIntegrate(so, ce, xi, yi);
+                }
+            }
+    });
 
-    // impulse
-    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-        [ce, so](const tbb::blocked_range<int> &r) {
-            for(int i=r.begin(); i!=r.end(); ++i) {
-                int32 n = ce[i].y - ce[i].x;
-                if(n > 0) {
-                    int xi, yi;
-                    GenIndex(i, xi, yi);
-                    ispc::impUpdateVelocity(so, ce, xi, yi);
-                }
-            }
-    });
-    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-        [ce, so](const tbb::blocked_range<int> &r) {
-            for(int i=r.begin(); i!=r.end(); ++i) {
-                int32 n = ce[i].y - ce[i].x;
-                if(n > 0) {
-                    int xi, yi;
-                    GenIndex(i, xi, yi);
-                    ispc::impIntegrate(so, ce, xi, yi);
-                }
-            }
-    });
+    //// impulse
+    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+    //    [ce, so](const tbb::blocked_range<int> &r) {
+    //        for(int i=r.begin(); i!=r.end(); ++i) {
+    //            int32 n = ce[i].y - ce[i].x;
+    //            if(n > 0) {
+    //                int xi, yi;
+    //                GenIndex(i, xi, yi);
+    //                ispc::impUpdateVelocity(so, ce, xi, yi);
+    //            }
+    //        }
+    //});
+    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+    //    [ce, so](const tbb::blocked_range<int> &r) {
+    //        for(int i=r.begin(); i!=r.end(); ++i) {
+    //            int32 n = ce[i].y - ce[i].x;
+    //            if(n > 0) {
+    //                int xi, yi;
+    //                GenIndex(i, xi, yi);
+    //                ispc::impIntegrate(so, ce, xi, yi);
+    //            }
+    //        }
+    //});
 
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
         [ps, ce, so](const tbb::blocked_range<int> &r) {

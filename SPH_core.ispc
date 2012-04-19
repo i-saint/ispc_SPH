@@ -9,10 +9,9 @@
 #include "SPH_const.h"
 typedef unsigned int32 uint32;
 
-#define SPH_FLUID_BLOCK_SIZE 128
 
-#define SPH_PRESSURE_STIFFNESS 50.0f
-#define SPH_REST_DENSITY 500.0f
+#define SPH_PRESSURE_STIFFNESS 200.0f
+#define SPH_REST_DENSITY 1000.0f
 #define SPH_WALL_STIFFNESS 3000.0f
 #define SPH_PARTICLE_MASS 0.002f
 #define SPH_PARTICLE_VISCOSITY 0.1f
@@ -33,7 +32,7 @@ export void sphInitializeConstants()
 }
 
 struct Vec3 { float x,y,z; };
-static soa<8> Vec3 g_accel[SPH_MAX_PARTICLE_NUM/8 + SPH_GRID_CELL_NUM];
+static soa<8> Vec3 g_accel[SPH_MAX_PARTICLE_NUM];
 
 struct Particle
 {
@@ -86,8 +85,8 @@ export void sphUpdateDensity(
     for(uniform int32 i=0; i<particle_num; ++i) {
         uniform vec3 pos1 = {particles[i].posx, particles[i].posy, particles[i].posz};
         float density = 0.0f;
-        for(uniform int32 nxi=nx_beg; nxi<=nx_end; ++nxi) {
-            for(uniform int32 nyi=ny_beg; nyi<=ny_end; ++nyi) {
+        for(uniform int32 nyi=ny_beg; nyi<=ny_end; ++nyi) {
+            for(uniform int32 nxi=nx_beg; nxi<=nx_end; ++nxi) {
                 uniform const GridData &ngd = grid[nyi*SPH_GRID_DIV + nxi];
                 uniform const int32 neighbor_num = ngd.y - ngd.x;
                 soa<8> Particle * uniform neighbors = &all_particles[ngd.soai*8];
@@ -152,14 +151,13 @@ static inline vec3 sphComputeAccel(
     vec3 vel1,
     vec3 vel2,
     float pressure1,
-    float density2,
-    int32 id1, int32 id2)
+    float density2 )
 {
     static uniform const float h_sq = SPH_PARTICLE_SIZE * SPH_PARTICLE_SIZE;
     vec3 accel = {0.0f, 0.0f, 0.0f};
     vec3 diff = pos2 - pos1;
     float r_sq = dot3(diff, diff);
-    if(r_sq < h_sq && id1!=id2) {
+    if(r_sq < h_sq && r_sq > 0.0f) {
         float pressure2 = sphCalculatePressure(density2);
         float r = sqrt(r_sq);
 
@@ -188,24 +186,22 @@ export void sphUpdateForce(
     uniform const int32 ny_end = min(yi+1, SPH_GRID_DIV-1);
 
     for(uniform int32 i=0; i<particle_num; ++i) {
-        uniform int32 id1 = gd.soai*8+i;
         uniform vec3 pos1 = {particles[i].posx, particles[i].posy, particles[i].posz};
         uniform vec3 vel1 = {particles[i].velx, particles[i].vely, particles[i].velz};
         uniform float density1 = particles[i].density;
         uniform float pressure1 = sphCalculatePressure(density1);
 
         vec3 accel = {0.0f, 0.0f, 0.0f};
-        for(uniform int32 nxi=nx_beg; nxi<=nx_end; ++nxi) {
-            for(uniform int32 nyi=ny_beg; nyi<=ny_end; ++nyi) {
+        for(uniform int32 nyi=ny_beg; nyi<=ny_end; ++nyi) {
+            for(uniform int32 nxi=nx_beg; nxi<=nx_end; ++nxi) {
                 uniform const GridData &ngd = grid[nyi*SPH_GRID_DIV + nxi];
                 uniform const int32 neighbor_num = ngd.y - ngd.x;
                 soa<8> Particle * uniform neighbors = &all_particles[ngd.soai*8];
                 foreach(t=0 ... neighbor_num) {
-                    int32 id2 = ngd.soai*8+t;
                     vec3 pos2 = {neighbors[t].posx, neighbors[t].posy, neighbors[t].posz};
                     vec3 vel2 = {neighbors[t].velx, neighbors[t].vely, neighbors[t].velz};
                     float density2 = neighbors[t].density;
-                    accel += sphComputeAccel(pos1, pos2, vel1, vel2, pressure1, density2, id1, id2);
+                    accel += sphComputeAccel(pos1, pos2, vel1, vel2, pressure1, density2);
                 }
             }
         }
@@ -221,26 +217,33 @@ static inline void sphComputeGravity(
     vec3 pos1,
     vec3 &vel1 )
 {
-    uniform const float<4> planes[6] = {
-        { 0.0f, 1.0f, 0.0f,-0},
-        { 0.0f,-1.0f, 0.0f, SPH_GRID_SIZE},
-        { 1.0f, 0.0f, 0.0f,-SPH_GRID_SIZE},
-        {-1.0f, 0.0f, 0.0f, SPH_GRID_SIZE},
-        { 0.0f, 0.0f, 1.0f,-SPH_GRID_SIZE},
-        { 0.0f, 0.0f,-1.0f, SPH_GRID_SIZE},
-    };
-    for(int i=0; i<1; ++i) {
-        vec3 n = planes[i].xyz;
-        float d = dot3(n, pos1) + planes[i].w;
-        vel1 += n * (-min(0.0f, d) * SPH_WALL_STIFFNESS);
-    }
+    const uniform float CENTER_SPHERE_RADIUS = 1.75f;
+    const uniform float GRAVITY = 5.0f;
 
-    // 重力加速
     {
-        const uniform float GRAVITY = 3.5f;
-        vec3 dir = { 0.0f, -1.0f, 0.0f};
+        // 中心の球との衝突判定
+        vec3 diff = -pos1;
+        float d = length3(diff);
+        vec3 dir = diff / d;
+        vel1 += dir * (min(0.0f, d-CENTER_SPHERE_RADIUS) * SPH_WALL_STIFFNESS);
+
+        // 重力加速
         vel1 += dir * GRAVITY;
     }
+
+    //uniform const float<4> planes[6] = {
+    //    { 0.0f, 1.0f, 0.0f,-0},
+    //    { 0.0f,-1.0f, 0.0f, SPH_GRID_SIZE},
+    //    { 1.0f, 0.0f, 0.0f,-SPH_GRID_SIZE},
+    //    {-1.0f, 0.0f, 0.0f, SPH_GRID_SIZE},
+    //    { 0.0f, 0.0f, 1.0f,-SPH_GRID_SIZE},
+    //    { 0.0f, 0.0f,-1.0f, SPH_GRID_SIZE},
+    //};
+    //for(int i=0; i<1; ++i) {
+    //    vec3 n = planes[i].xyz;
+    //    float d = dot3(n, pos1) + planes[i].w;
+    //    vel1 += n * (-min(0.0f, d) * SPH_WALL_STIFFNESS);
+    //}
 }
 
 
@@ -260,9 +263,10 @@ export void sphIntegrate(
     foreach(i=0 ... particle_num) {
         vec3 vel = {particles[i].velx, particles[i].vely, particles[i].velz};
         vec3 accel = {accels[i].x, accels[i].y, accels[i].z};
+        //vec3 accel = {0.0f, 0.0f, 0.0f};
         vec3 pos = {particles[i].posx, particles[i].posy, particles[i].posz};
 
-        const uniform float DECELERATE = 0.995;
+        const uniform float DECELERATE = 0.999;
         sphComputeGravity(pos, accel);
         vel += accel * timestep;
         // 自然減速
@@ -350,8 +354,8 @@ export void impUpdateVelocity(
         uniform vec3 pos1 = {particles[i].posx, particles[i].posy, particles[i].posz};
         uniform vec3 vel1 = {particles[i].velx, particles[i].vely, particles[i].velz};
         vec3 accel = {0.0f, 0.0f, 0.0f};
-        for(uniform int32 nxi=nx_beg; nxi<=nx_end; ++nxi) {
-            for(uniform int32 nyi=ny_beg; nyi<=ny_end; ++nyi) {
+        for(uniform int32 nyi=ny_beg; nyi<=ny_end; ++nyi) {
+            for(uniform int32 nxi=nx_beg; nxi<=nx_end; ++nxi) {
                 uniform const GridData &ngd = grid[nyi*SPH_GRID_DIV + nxi];
                 soa<8> Particle * uniform neighbors = &all_particles[ngd.soai*8];
                 uniform const int32 neighbor_num = ngd.y - ngd.x;

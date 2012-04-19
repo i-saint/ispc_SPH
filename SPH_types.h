@@ -16,7 +16,7 @@ using ist::soavec44;
 
 typedef ispc::Particle_SOA8 sphParticleSOA8;
 typedef ispc::GridData sphGridData;
-typedef sphGridData (sphGridDataArray2D)[SPH_GRID_DIV][SPH_GRID_DIV];
+
 
 __declspec(align(16)) 
 struct sphParticle
@@ -25,10 +25,9 @@ struct sphParticle
     simdvec4 velocity;
     union {
         struct {
-            float32 energy;
             float32 density;
             uint32 hash;
-            uint32 dummy[1];
+            uint32 dummy[2];
         } params;
         simdvec4 paramsv;
     };
@@ -38,7 +37,7 @@ __declspec(align(16))
 struct sphGrid
 {
     sphParticle particles[SPH_MAX_PARTICLE_NUM];
-    sphParticleSOA8 particles_soa[SPH_MAX_PARTICLE_NUM/8 + SPH_GRID_CELL_NUM];
+    sphParticleSOA8 particles_soa[SPH_MAX_PARTICLE_NUM];
     sphGridData cell[SPH_GRID_DIV][SPH_GRID_DIV];
 
     sphGrid();
