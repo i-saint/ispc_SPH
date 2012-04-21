@@ -185,7 +185,7 @@ void sphGrid::update()
                 if(n > 0) {
                     int xi, yi;
                     GenIndex(i, xi, yi);
-                    ispc::sphUpdateDensity(so, ce, xi, yi);
+                    ispc::sphUpdateDensity((ispc::Particle*)so, ce, xi, yi);
                 }
             }
     });
@@ -196,7 +196,7 @@ void sphGrid::update()
                 if(n > 0) {
                     int xi, yi;
                     GenIndex(i, xi, yi);
-                    ispc::sphUpdateForce(so, ce, xi, yi);
+                    ispc::sphUpdateForce((ispc::Particle*)so, ce, xi, yi);
                 }
             }
     });
@@ -207,7 +207,7 @@ void sphGrid::update()
                 if(n > 0) {
                     int xi, yi;
                     GenIndex(i, xi, yi);
-                    ispc::sphIntegrate(so, ce, xi, yi);
+                    ispc::sphIntegrate((ispc::Particle*)so, ce, xi, yi);
                 }
             }
     });
@@ -220,7 +220,7 @@ void sphGrid::update()
     //            if(n > 0) {
     //                int xi, yi;
     //                GenIndex(i, xi, yi);
-    //                ispc::impUpdateVelocity(so, ce, xi, yi);
+    //                ispc::impUpdateVelocity((ispc::Particle*)so, ce, xi, yi);
     //            }
     //        }
     //});
@@ -231,7 +231,7 @@ void sphGrid::update()
     //            if(n > 0) {
     //                int xi, yi;
     //                GenIndex(i, xi, yi);
-    //                ispc::impIntegrate(so, ce, xi, yi);
+    //                ispc::impIntegrate((ispc::Particle*)so, ce, xi, yi);
     //            }
     //        }
     //});
