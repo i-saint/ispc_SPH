@@ -18,4 +18,6 @@
 #define SPH_GRID_DIV_BITS 8
 #define SPH_GRID_CELL_NUM (SPH_GRID_DIV*SPH_GRID_DIV)
 
+#define SPH_WALL_STIFFNESS 300.0f
+
 #endif // _SPH_const_h_

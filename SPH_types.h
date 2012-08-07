@@ -4,9 +4,12 @@
 #include "SPH_const.h"
 #include "SPH_core_ispc.h"
 #include "SoA.h"
-typedef int int32;
-typedef unsigned int uint32;
-typedef float float32;
+
+typedef short           int16;
+typedef unsigned short  uint16;
+typedef int             int32;
+typedef unsigned int    uint32;
+typedef float           float32;
 
 using ist::simdvec4;
 using ist::simdvec8;
@@ -16,6 +19,10 @@ using ist::soavec44;
 
 typedef ispc::Particle_SOA8 sphParticleSOA8;
 typedef ispc::GridData sphGridData;
+
+#define set_xyz(v, _x, _y, _z)  v.x =_x; v.y =_y; v.z =_z;
+#define set_nxyz(v, _x, _y, _z) v.nx=_x; v.ny=_y; v.nz=_z;
+#define set_vxyz(v, _x, _y, _z) v.vx=_x; v.vy=_y; v.vz=_z;
 
 
 __declspec(align(16)) 
@@ -27,7 +34,8 @@ struct sphParticle
         struct {
             float32 density;
             uint32 hash;
-            uint32 dummy[2];
+            int32 hit;
+            int32 lifetime;
         } params;
         simdvec4 paramsv;
     };
