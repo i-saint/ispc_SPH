@@ -122,7 +122,7 @@ sphGrid::sphGrid()
         particles[i].position = ist::simdvec4_set(
             SPH_PARTICLE_SIZE*0.5f * (i % (SPH_GRID_DIV*2)) - SPH_GRID_SIZE + 0.00010f*i,
             SPH_PARTICLE_SIZE*0.5f * (i / (SPH_GRID_DIV*4)) + 4.0f + 0.00011f*i,
-            SPH_PARTICLE_SIZE*0.5f * (i / (SPH_GRID_DIV*1)) - SPH_GRID_SIZE*0.5 + 0.00012f*i,
+            SPH_PARTICLE_SIZE*0.5f * (i / (SPH_GRID_DIV*1)) - SPH_GRID_SIZE*0.5f + 0.00012f*i,
             //0.0f,
             1.0f );
         particles[i].velocity = ist::simdvec4_set(0.0f, 0.0f, 0.0f, 0.0f);
