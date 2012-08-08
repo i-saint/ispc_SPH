@@ -94,7 +94,7 @@ export void sphProcessCollision(
             for(uniform int32 p=0; p<6; ++p) {
                 uniform vec3 plane_normal = get_normal(shape.planes[p]);
                 uniform float plane_distance = shape.planes[p].distance;
-                float distance = dot3(particles_pos, plane_normal) - particle_radius;
+                float distance = dot3(particles_pos, plane_normal) + plane_distance - particle_radius;
                 if(distance < 0.0f) {
                     inside++;
                     if(distance < min_distance) {
