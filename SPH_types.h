@@ -1,6 +1,7 @@
 #ifndef _SPH_types_h_
 #define _SPH_types_h_
 
+#include <vector>
 #include "SPH_const.h"
 #include "SPH_core_ispc.h"
 #include "SoA.h"
@@ -35,21 +36,32 @@ struct sphParticle
             float32 density;
             uint32 hash;
             int32 hit;
-            int32 lifetime;
+            float32 lifetime;
         } params;
         simdvec4 paramsv;
     };
 };
 
 __declspec(align(16)) 
-struct sphGrid
+struct sphWorld
 {
     sphParticle particles[SPH_MAX_PARTICLE_NUM];
     sphParticleSOA8 particles_soa[SPH_MAX_PARTICLE_NUM];
     sphGridData cell[SPH_GRID_DIV][SPH_GRID_DIV];
+    size_t num_active_particles;
+    float32 particle_lifetime;
 
-    sphGrid();
-    void update();
+    std::vector<ispc::Sphere>   collision_spheres;
+    std::vector<ispc::Plane>    collision_planes;
+    std::vector<ispc::Box>      collision_boxes;
+
+    std::vector<ispc::PointForce>       force_point;
+    std::vector<ispc::DirectionalForce> force_directional;
+    std::vector<ispc::BoxForce>         force_box;
+
+    sphWorld();
+    void addParticles(sphParticle *p, size_t num_particles);
+    void update(float32 dt);
 };
 
 

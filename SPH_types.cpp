@@ -48,10 +48,6 @@ void SoAnize( int32 num, const sphParticle *particles, ispc::Particle_SOA8 *out 
 
         simd_store(out[bi].hit+0, _mm_set1_epi32(0));
         simd_store(out[bi].hit+4, _mm_set1_epi32(0));
-        simd_store(out[bi].lifetime+0,
-            _mm_set_epi32(particles[i+0].params.lifetime, particles[i+1].params.lifetime, particles[i+2].params.lifetime, particles[i+3].params.lifetime));
-        simd_store(out[bi].lifetime+4,
-            _mm_set_epi32(particles[i+4].params.lifetime, particles[i+5].params.lifetime, particles[i+6].params.lifetime, particles[i+7].params.lifetime));
 
         //// 不要
         //soas = ist::simdvec4_set(particles[i+0].params.density, particles[i+1].params.density, particles[i+2].params.density, particles[i+3].params.density);
@@ -97,16 +93,18 @@ void AoSnize( int32 num, const ispc::Particle_SOA8 *particles, sphParticle *out 
             out[i+ei].velocity = aos_vel[ei/4][ei%4];
             out[i+ei].params.density = particles[bi].density[ei];
             out[i+ei].params.hit = particles[bi].hit[ei];
-            out[i+ei].params.lifetime = particles[bi].lifetime[ei];
         }
     }
 }
 
-inline int32 GenHash(const float *pos4)
+inline uint32 GenHash(const sphParticle &particle)
 {
     static const float32 rcpcellsize = 1.0f/SPH_GRID_CELL_SIZE;
-    int32 r=(clamp<int32>(int32((pos4[0]-SPH_GRID_POS)*rcpcellsize), 0, (SPH_GRID_DIV-1)) << (SPH_GRID_DIV_BITS*0)) |
-            (clamp<int32>(int32((pos4[1]-SPH_GRID_POS)*rcpcellsize), 0, (SPH_GRID_DIV-1)) << (SPH_GRID_DIV_BITS*1));
+
+    const float *pos4 = (const float*)&particle.position;
+    uint32 r=(clamp<int32>(int32((pos4[0]-SPH_GRID_POS)*rcpcellsize), 0, (SPH_GRID_DIV-1)) << (SPH_GRID_DIV_BITS*0)) |
+             (clamp<int32>(int32((pos4[1]-SPH_GRID_POS)*rcpcellsize), 0, (SPH_GRID_DIV-1)) << (SPH_GRID_DIV_BITS*1));
+    if(particle.params.lifetime==0.0f) { r |= 0x80000000; }
     return r;
 }
 
@@ -116,32 +114,46 @@ inline void GenIndex(uint32 hash, int32 &xi, int32 &yi)
     yi = (hash >> (SPH_GRID_DIV_BITS*1)) & (SPH_GRID_DIV-1);
 }
 
-sphGrid::sphGrid()
+sphWorld::sphWorld()
+    : num_active_particles(0)
+    , particle_lifetime(3600.0f)
 {
     for(uint32 i=0; i<_countof(particles); ++i) {
-        particles[i].position = ist::simdvec4_set(
-            SPH_PARTICLE_SIZE*0.5f * (i % (SPH_GRID_DIV*2)) - SPH_GRID_SIZE + 0.00010f*i,
-            SPH_PARTICLE_SIZE*0.5f * (i / (SPH_GRID_DIV*4)) + 4.0f + 0.00011f*i,
-            SPH_PARTICLE_SIZE*0.5f * (i / (SPH_GRID_DIV*1)) - SPH_GRID_SIZE*0.5f + 0.00012f*i,
-            //0.0f,
-            1.0f );
-        particles[i].velocity = ist::simdvec4_set(0.0f, 0.0f, 0.0f, 0.0f);
-        particles[i].params.density = 0.0f;
+        particles[i].params.lifetime = 0.0f;
+    }
+
+
+    {
+        ispc::Sphere sphere;
+        set_xyz(sphere, 0.0f, 0.0f, 0.0f); sphere.radius = 2.5f;
+        collision_spheres.push_back(sphere);
+    }
+    //{
+    //    ispc::Plane plane;
+    //    set_nxyz(plane, 0.0f, 0.0f, -1.0f); plane.distance = 0.5f;
+    //    collision_planes.push_back(plane);
+    //}
+
+    {
+        ispc::PointForce force;
+        set_xyz(force, 0.0f, 0.0f, 0.0f); force.strength = -5.0f;
+        force_point.push_back(force);
     }
 }
 
-void sphGrid::update()
+void sphWorld::addParticles( sphParticle *p, size_t num )
 {
-    sphParticle *ps = particles;            // メンバ変数は lampda 関数に取り込めないのでローカルに落とす
+    num = std::min<size_t>(num, SPH_MAX_PARTICLE_NUM-num_active_particles);
+    for(size_t i=0; i<num; ++i) {
+        particles[num_active_particles+i] = p[i];
+        particles[num_active_particles+i].params.lifetime = particle_lifetime;
+    }
+    num_active_particles += num;
+}
+
+void sphWorld::update(float32 dt)
+{
     sphGridData *ce = &cell[0][0];          // 
-    ispc::Particle_SOA8 *so = particles_soa;// 
-
-    ispc::Sphere spheres[1];
-    ispc::Plane planes[1];
-    ispc::Box boxes[1];
-
-    set_xyz(spheres[0], 0.0f, 0.0f, 0.0f); spheres[0].radius = 1.75f;
-    set_nxyz(planes[0], 0.0f, 1.0f, 0.0f); planes[0].distance = 1.0f;
 
     // clear grid
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
@@ -152,36 +164,52 @@ void sphGrid::update()
         });
 
     // gen hash
-    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_MAX_PARTICLE_NUM, 1024),
+    tbb::parallel_for(tbb::blocked_range<int>(0, (int32)num_active_particles, 1024),
         [&](const tbb::blocked_range<int> &r) {
             for(int i=r.begin(); i!=r.end(); ++i) {
-                ps[i].params.hash = GenHash((float*)&ps[i].position);
+                particles[i].params.lifetime = std::max<float32>(particles[i].params.lifetime-dt, 0.0f);
+                particles[i].params.hash = GenHash(particles[i]);
             }
         });
 
     // パーティクルを hash で sort
-    tbb::parallel_sort(particles, particles+SPH_MAX_PARTICLE_NUM, 
+    tbb::parallel_sort(particles, particles+num_active_particles, 
         [&](const sphParticle &a, const sphParticle &b) { return a.params.hash < b.params.hash; } );
 
     // パーティクルがどの grid に入っているかを算出
-    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_MAX_PARTICLE_NUM, 1024),
+    tbb::parallel_for(tbb::blocked_range<int>(0, (int32)num_active_particles, 1024),
         [&](const tbb::blocked_range<int> &r) {
             for(int i=r.begin(); i!=r.end(); ++i) {
-                const int32 G_ID = i;
-                int32 G_ID_PREV = G_ID-1;
-                int32 G_ID_NEXT = G_ID+1;
+                const uint32 G_ID = i;
+                uint32 G_ID_PREV = G_ID-1;
+                uint32 G_ID_NEXT = G_ID+1;
 
-                int32 cell = ps[G_ID].params.hash;
-                int32 cell_prev = (G_ID_PREV==-1) ? -1 : ps[G_ID_PREV].params.hash;
-                int32 cell_next = (G_ID_NEXT==SPH_MAX_PARTICLE_NUM) ? -2 : ps[G_ID_NEXT].params.hash;
-                if(cell != cell_prev) {
-                    ce[cell].begin = G_ID;
+                uint32 cell = particles[G_ID].params.hash;
+                uint32 cell_prev = (G_ID_PREV==-1) ? -1 : particles[G_ID_PREV].params.hash;
+                uint32 cell_next = (G_ID_NEXT==SPH_MAX_PARTICLE_NUM) ? -2 : particles[G_ID_NEXT].params.hash;
+                if((cell & 0x80000000) != 0) { // 最上位 bit が立っていたら死んでいる扱い
+                    if((cell_prev & 0x80000000) == 0) { // 
+                        num_active_particles = G_ID;
+                    }
                 }
-                if(cell != cell_next) {
-                    ce[cell].end = G_ID + 1;
+                else {
+                    if(cell != cell_prev) {
+                        ce[cell].begin = G_ID;
+                    }
+                    if(cell != cell_next) {
+                        ce[cell].end = G_ID + 1;
+                    }
                 }
             }
     });
+    {
+        if( (particles[0].params.hash & 0x80000000) != 0 ) {
+            num_active_particles = 0;
+        }
+        else if( (particles[SPH_MAX_PARTICLE_NUM-1].params.hash & 0x80000000) == 0 ) {
+            num_active_particles = SPH_MAX_PARTICLE_NUM;
+        }
+    }
 
     {
         int32 soai = 0;
@@ -196,61 +224,64 @@ void sphGrid::update()
         [&](const tbb::blocked_range<int> &r) {
             for(int i=r.begin(); i!=r.end(); ++i) {
                 int32 n = ce[i].end - ce[i].begin;
-                if(n > 0) {
-                    sphParticle *p = &ps[ce[i].begin];
-                    ispc::Particle_SOA8 *t = &so[ce[i].soai];
-                    SoAnize(n, p, t);
-                }
+                if(n == 0) { continue; }
+                sphParticle *p = &particles[ce[i].begin];
+                ispc::Particle_SOA8 *t = &particles_soa[ce[i].soai];
+                SoAnize(n, p, t);
             }
     });
 
     // SPH
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-        [=](const tbb::blocked_range<int> &r) {
+        [&](const tbb::blocked_range<int> &r) {
             for(int i=r.begin(); i!=r.end(); ++i) {
                 int32 n = ce[i].end - ce[i].begin;
-                if(n > 0) {
-                    int xi, yi;
-                    GenIndex(i, xi, yi);
-                    ispc::sphUpdateDensity((ispc::Particle*)so, ce, xi, yi);
-                }
+                if(n == 0) { continue; }
+                int xi, yi;
+                GenIndex(i, xi, yi);
+                ispc::sphUpdateDensity((ispc::Particle*)particles_soa, ce, xi, yi);
+            }
+    });
+#ifdef SPH_enable_neighbor_density_estimation
+    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+        [&](const tbb::blocked_range<int> &r) {
+            for(int i=r.begin(); i!=r.end(); ++i) {
+                int32 n = ce[i].end - ce[i].begin;
+                if(n == 0) { continue; }
+                int xi, yi;
+                GenIndex(i, xi, yi);
+                ispc::sphUpdateDensity2((ispc::Particle*)particles_soa, ce, xi, yi);
+            }
+    });
+#endif // SPH_enable_neighbor_density_estimation
+    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+        [&](const tbb::blocked_range<int> &r) {
+            for(int i=r.begin(); i!=r.end(); ++i) {
+                int32 n = ce[i].end - ce[i].begin;
+                if(n == 0) { continue; }
+                int xi, yi;
+                GenIndex(i, xi, yi);
+                ispc::sphUpdateForce((ispc::Particle*)particles_soa, ce, xi, yi);
             }
     });
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
         [&](const tbb::blocked_range<int> &r) {
             for(int i=r.begin(); i!=r.end(); ++i) {
                 int32 n = ce[i].end - ce[i].begin;
-                if(n > 0) {
-                    int xi, yi;
-                    GenIndex(i, xi, yi);
-                    ispc::sphUpdateForce((ispc::Particle*)so, ce, xi, yi);
-                }
-            }
-    });
-    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-        [&](const tbb::blocked_range<int> &r) {
-            for(int i=r.begin(); i!=r.end(); ++i) {
-                int32 n = ce[i].end - ce[i].begin;
-                if(n > 0) {
-                    int xi, yi;
-                    GenIndex(i, xi, yi);
-                    ispc::sphProcessCollision(
-                        (ispc::Particle*)so, ce, xi, yi,
-                        spheres, 1,
-                        planes, 1,
-                        boxes, 0 );
-                }
-            }
-    });
-    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-        [&](const tbb::blocked_range<int> &r) {
-            for(int i=r.begin(); i!=r.end(); ++i) {
-                int32 n = ce[i].end - ce[i].begin;
-                if(n > 0) {
-                    int xi, yi;
-                    GenIndex(i, xi, yi);
-                    ispc::sphIntegrate((ispc::Particle*)so, ce, xi, yi);
-                }
+                if(n == 0) { continue; }
+                int xi, yi;
+                GenIndex(i, xi, yi);
+                ispc::sphProcessForce(
+                    (ispc::Particle*)particles_soa, ce, xi, yi,
+                    &force_point[0],        (int32)force_point.size(),
+                    &force_directional[0],  (int32)force_directional.size(),
+                    &force_box[0],          (int32)force_box.size() );
+                ispc::sphProcessCollision(
+                    (ispc::Particle*)particles_soa, ce, xi, yi,
+                    &collision_spheres[0],  (int32)collision_spheres.size(),
+                    &collision_planes[0],   (int32)collision_planes.size(),
+                    &collision_boxes[0],    (int32)collision_boxes.size() );
+                ispc::sphIntegrate((ispc::Particle*)particles_soa, ce, xi, yi);
             }
     });
 
@@ -259,22 +290,30 @@ void sphGrid::update()
     //    [&](const tbb::blocked_range<int> &r) {
     //        for(int i=r.begin(); i!=r.end(); ++i) {
     //            int32 n = ce[i].end - ce[i].begin;
-    //            if(n > 0) {
-    //                int xi, yi;
-    //                GenIndex(i, xi, yi);
-    //                ispc::impUpdateVelocity((ispc::Particle*)so, ce, xi, yi);
-    //            }
+    //            if(n == 0) { continue; }
+    //            int xi, yi;
+    //            GenIndex(i, xi, yi);
+    //            ispc::impUpdateVelocity((ispc::Particle*)particles_soa, ce, xi, yi);
     //        }
     //});
     //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
     //    [&](const tbb::blocked_range<int> &r) {
     //        for(int i=r.begin(); i!=r.end(); ++i) {
     //            int32 n = ce[i].end - ce[i].begin;
-    //            if(n > 0) {
-    //                int xi, yi;
-    //                GenIndex(i, xi, yi);
-    //                ispc::impIntegrate((ispc::Particle*)so, ce, xi, yi);
-    //            }
+    //            if(n == 0) { continue; }
+    //            int xi, yi;
+    //            GenIndex(i, xi, yi);
+    //            ispc::sphProcessForce(
+    //                (ispc::Particle*)particles_soa, ce, xi, yi,
+    //                &force_point[0],        (int32)force_point.size(),
+    //                &force_directional[0],  (int32)force_directional.size(),
+    //                &force_box[0],          (int32)force_box.size() );
+    //            ispc::sphProcessCollision(
+    //                (ispc::Particle*)particles_soa, ce, xi, yi,
+    //                &collision_spheres[0],  (int32)collision_spheres.size(),
+    //                &collision_planes[0],   (int32)collision_planes.size(),
+    //                &collision_boxes[0],    (int32)collision_boxes.size() );
+    //            ispc::impIntegrate((ispc::Particle*)particles_soa, ce, xi, yi);
     //        }
     //});
 
@@ -284,8 +323,8 @@ void sphGrid::update()
             for(int i=r.begin(); i!=r.end(); ++i) {
                 int32 n = ce[i].end - ce[i].begin;
                 if(n > 0) {
-                    sphParticle *p = &ps[ce[i].begin];
-                    ispc::Particle_SOA8 *t = &so[ce[i].soai];
+                    sphParticle *p = &particles[ce[i].begin];
+                    ispc::Particle_SOA8 *t = &particles_soa[ce[i].soai];
                     AoSnize(n, t, p);
                 }
             }

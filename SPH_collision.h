@@ -23,13 +23,32 @@ struct Box
 };
 
 
+struct PointForce
+{
+    float x, y, z;
+    float strength;
+};
+
+struct DirectionalForce
+{
+    float nx, ny, nz;
+    float strength;
+};
+
+struct BoxForce
+{
+    float nx, ny, nz;
+    float strength;
+    Box box;
+};
+
+
 struct Particle
 {
     float   x, y, z;
     float   vx, vy, vz;
     float   density;
     int32   hit;
-    int32   lifetime;
 };
 
 struct Force
@@ -54,14 +73,6 @@ struct GridData
 #define set_pos(p, v)   p.x=v.x; p.y=v.y; p.z=v.z;
 #define set_vel(p, v)   p.vx=v.x; p.vy=v.y; p.vz=v.z;
 #define set_accel(p, v) p.ax=v.x; p.ay=v.y; p.az=v.z;
-
-#define repulse(p, f, n, d)\
-    {\
-        p.hit++;\
-        vec3 accel = get_accel(f);\
-        accel += n * (-d * SPH_WALL_STIFFNESS);\
-        set_accel(f, accel);\
-    }
 
 
 #endif // __SPH_collision_h__

@@ -152,7 +152,7 @@ ID3D11Buffer*                       g_pCBChangesEveryFrame = NULL;
 XMFLOAT4                            g_vMeshColor( 0.7f, 0.7f, 0.7f, 1.0f );
 PerspectiveCamera                   g_camera;
 
-sphGrid                             g_sphgrid;
+sphWorld                            g_sphgrid;
 
 
 // 0.0f-1.0f
@@ -555,7 +555,7 @@ HRESULT InitDevice()
 
     // camera
     g_camera.setProjection( XMConvertToRadians(45.0f), width / (FLOAT)height, 0.1f, 100.0f );
-    g_camera.setView(XMVectorSet( 0.0f, 7.0f, -12.5f, 0.0f ), XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f ), XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f ));
+    g_camera.setView(XMVectorSet( 0.0f, 10.0f, -12.5f, 0.0f ), XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f ), XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f ));
 
     return S_OK;
 }
@@ -613,6 +613,10 @@ LRESULT CALLBACK WndProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam 
 
 
 
+inline float32 GenRand()
+{
+    return float32((rand()-(RAND_MAX/2))*2) / (float32)RAND_MAX;
+}
 
 //--------------------------------------------------------------------------------------
 // Render a frame
@@ -633,11 +637,19 @@ void Render()
     }
 
     {
+        sphParticle particles[32];
+        for(size_t i=0; i<_countof(particles); ++i) {
+            particles[i].position = ist::simdvec4_set(GenRand()*1.5f, GenRand()+6.0f, GenRand()*1.5f, 1.0f);
+            particles[i].velocity = _mm_set1_ps(0.0f);
+        }
+        g_sphgrid.addParticles(particles, _countof(particles));
+    }
+    {
         static PerformanceCounter s_timer;
         static float s_prev = 0.0f;
         PerformanceCounter timer;
 
-        g_sphgrid.update();
+        g_sphgrid.update(1.0f);
         g_pImmediateContext->UpdateSubresource( g_pCubeInstanceBuffer, 0, NULL, &g_sphgrid.particles, 0, 0 );
 
         if(s_timer.getElapsedMillisecond() - s_prev > 2000.0f) {
@@ -685,7 +697,7 @@ void Render()
     g_pImmediateContext->PSSetShader( g_pCubePixelShader, NULL, 0 );
     g_pImmediateContext->PSSetConstantBuffers( 0, 1, &g_pCBChangesEveryFrame );
 
-    g_pImmediateContext->DrawIndexedInstanced( 36, SPH_MAX_PARTICLE_NUM, 0, 0, 0 );
+    g_pImmediateContext->DrawIndexedInstanced( 36, (UINT)g_sphgrid.num_active_particles, 0, 0, 0 );
 
     // Present our back buffer to our front buffer
     g_pSwapChain->Present( 0, 0 );
