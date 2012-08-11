@@ -1,10 +1,5 @@
-//--------------------------------------------------------------------------------------
-// File: Tutorial07.cpp
-//
-// This application demonstrates texturing
-//
-// Copyright (c) Microsoft Corporation. All rights reserved.
-//--------------------------------------------------------------------------------------
+#pragma warning( disable : 4996 ) // _s Ç∂Ç·Ç»Ç¢ CRT ä÷êîégÇ§Ç∆èoÇÈÇ‚Ç¬
+
 #include <windows.h>
 #include <d3d11.h>
 #include <d3dx11.h>
@@ -344,8 +339,8 @@ HRESULT InitDevice()
     sd.BufferDesc.Width = width;
     sd.BufferDesc.Height = height;
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    sd.BufferDesc.RefreshRate.Numerator = 60;
-    sd.BufferDesc.RefreshRate.Denominator = 1;
+    sd.BufferDesc.RefreshRate.Numerator = 1;
+    sd.BufferDesc.RefreshRate.Denominator = 60;
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow = g_hWnd;
     sd.SampleDesc.Count = 1;
@@ -555,7 +550,7 @@ HRESULT InitDevice()
 
     // camera
     g_camera.setProjection( XMConvertToRadians(45.0f), width / (FLOAT)height, 0.1f, 100.0f );
-    g_camera.setView(XMVectorSet( 0.0f, 10.0f, -12.5f, 0.0f ), XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f ), XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f ));
+    g_camera.setView(XMVectorSet( 0.0f, -10.0f, -12.5f, 0.0f ), XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f ), XMVectorSet( 0.0f, 0.0f, -1.0f, 0.0f ));
 
     return S_OK;
 }
@@ -639,7 +634,7 @@ void Render()
     {
         sphParticle particles[32];
         for(size_t i=0; i<_countof(particles); ++i) {
-            particles[i].position = ist::simdvec4_set(GenRand()*1.5f, GenRand()+6.0f, GenRand()*1.5f, 1.0f);
+            particles[i].position = ist::simdvec4_set(GenRand()*0.5f, GenRand()*0.5f, GenRand()*0.5f-7.5f, 1.0f);
             particles[i].velocity = _mm_set1_ps(0.0f);
         }
         g_sphgrid.addParticles(particles, _countof(particles));
@@ -652,24 +647,30 @@ void Render()
         g_sphgrid.update(1.0f);
         g_pImmediateContext->UpdateSubresource( g_pCubeInstanceBuffer, 0, NULL, &g_sphgrid.particles, 0, 0 );
 
-        if(s_timer.getElapsedMillisecond() - s_prev > 2000.0f) {
+        if(s_timer.getElapsedMillisecond() - s_prev > 1000.0f) {
             char buf[128];
-            sprintf_s(buf, "  SPH update: %.3fms\n", timer.getElapsedMillisecond());
+            _snprintf(buf, _countof(buf), "  SPH update: %d particles %.3fms\n", g_sphgrid.num_active_particles, timer.getElapsedMillisecond());
             OutputDebugStringA(buf);
+            ::SetWindowTextA(g_hWnd, buf);
             s_prev = s_timer.getElapsedMillisecond();
         }
     }
 
     {
         CBChangesEveryFrame cb;
+        XMVECTOR eye = g_camera.getEye();
+        {
+            XMMATRIX rot = XMMatrixRotationZ(XMConvertToRadians(0.1f));
+            eye = XMVector4Transform(eye, rot);
+        }
+        g_camera.setEye(eye);
         g_camera.updateMatrix();
         XMMATRIX vp = g_camera.getViewProjectionMatrix();
-        XMVECTOR eye = g_camera.getEye();
 
         cb.ViewProjection   = XMMatrixTranspose( vp );
         cb.CameraPos        = (FLOAT*)&eye;
 
-        cb.LightPos         = XMFLOAT4(0.0f, 10.0f, 0.0f, 1.0f);
+        cb.LightPos         = XMFLOAT4(10.0f, 10.0f, -10.0f, 1.0f);
         cb.LightColor       = XMFLOAT4(0.9f, 0.9f, 0.9f, 1.0f);
 
         cb.MeshShininess    = 200.0f;
@@ -700,5 +701,6 @@ void Render()
     g_pImmediateContext->DrawIndexedInstanced( 36, (UINT)g_sphgrid.num_active_particles, 0, 0, 0 );
 
     // Present our back buffer to our front buffer
-    g_pSwapChain->Present( 0, 0 );
+    g_pSwapChain->Present( 1, 0 ); // vsync on
+    //g_pSwapChain->Present( 0, 0 ); // vsync off
 }

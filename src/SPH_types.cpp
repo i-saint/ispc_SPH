@@ -123,21 +123,45 @@ sphWorld::sphWorld()
     }
 
 
-    {
-        ispc::Sphere sphere;
-        set_xyz(sphere, 0.0f, 0.0f, 0.0f); sphere.radius = 2.5f;
-        collision_spheres.push_back(sphere);
-    }
     //{
-    //    ispc::Plane plane;
-    //    set_nxyz(plane, 0.0f, 0.0f, -1.0f); plane.distance = 0.5f;
-    //    collision_planes.push_back(plane);
+    //    ispc::Sphere sphere;
+    //    set_xyz(sphere, 0.0f, 0.0f, 0.0f); sphere.radius = 2.5f;
+    //    collision_spheres.push_back(sphere);
+    //}
+    //{
+    //    ispc::PointForce force;
+    //    set_xyz(force, 0.0f, 0.0f, 0.0f); force.strength = -5.0f;
+    //    force_point.push_back(force);
     //}
 
     {
+        ispc::Sphere sphere;
+        set_xyz(sphere, 0.0f, 0.0f, 0.0f); sphere.radius = 1.0f;
+        collision_spheres.push_back(sphere);
+    }
+    {
+        ispc::Plane plane;
+        set_nxyz(plane, 1.0f, 0.0f, 0.0f); plane.distance = SPH_GRID_SIZE;
+        collision_planes.push_back(plane);
+        set_nxyz(plane,-1.0f, 0.0f, 0.0f); plane.distance = SPH_GRID_SIZE;
+        collision_planes.push_back(plane);
+        set_nxyz(plane, 0.0f, 1.0f, 0.0f); plane.distance = SPH_GRID_SIZE;
+        collision_planes.push_back(plane);
+        set_nxyz(plane, 0.0f,-1.0f, 0.0f); plane.distance = SPH_GRID_SIZE;
+        collision_planes.push_back(plane);
+        set_nxyz(plane, 0.0f, 0.0f,-1.0f); plane.distance = 0.0f;
+        collision_planes.push_back(plane);
+    }
+
+    {
         ispc::PointForce force;
-        set_xyz(force, 0.0f, 0.0f, 0.0f); force.strength = -5.0f;
+        set_xyz(force, 0.0f, 0.0f, 0.0f); force.strength = -0.001f;
         force_point.push_back(force);
+    }
+    {
+        ispc::DirectionalForce force;
+        set_nxyz(force, 0.0f, 0.0f, 1.0f); force.strength = 5.0f;
+        force_directional.push_back(force);
     }
 }
 
@@ -231,7 +255,61 @@ void sphWorld::update(float32 dt)
             }
     });
 
-    // SPH
+//    // SPH
+//    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+//        [&](const tbb::blocked_range<int> &r) {
+//            for(int i=r.begin(); i!=r.end(); ++i) {
+//                int32 n = ce[i].end - ce[i].begin;
+//                if(n == 0) { continue; }
+//                int xi, yi;
+//                GenIndex(i, xi, yi);
+//                ispc::sphUpdateDensity((ispc::Particle*)particles_soa, ce, xi, yi);
+//            }
+//    });
+//#ifdef SPH_enable_neighbor_density_estimation
+//    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+//        [&](const tbb::blocked_range<int> &r) {
+//            for(int i=r.begin(); i!=r.end(); ++i) {
+//                int32 n = ce[i].end - ce[i].begin;
+//                if(n == 0) { continue; }
+//                int xi, yi;
+//                GenIndex(i, xi, yi);
+//                ispc::sphUpdateDensity2((ispc::Particle*)particles_soa, ce, xi, yi);
+//            }
+//    });
+//#endif // SPH_enable_neighbor_density_estimation
+//    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+//        [&](const tbb::blocked_range<int> &r) {
+//            for(int i=r.begin(); i!=r.end(); ++i) {
+//                int32 n = ce[i].end - ce[i].begin;
+//                if(n == 0) { continue; }
+//                int xi, yi;
+//                GenIndex(i, xi, yi);
+//                ispc::sphUpdateForce((ispc::Particle*)particles_soa, ce, xi, yi);
+//            }
+//    });
+//    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
+//        [&](const tbb::blocked_range<int> &r) {
+//            for(int i=r.begin(); i!=r.end(); ++i) {
+//                int32 n = ce[i].end - ce[i].begin;
+//                if(n == 0) { continue; }
+//                int xi, yi;
+//                GenIndex(i, xi, yi);
+//                ispc::sphProcessExternalForce(
+//                    (ispc::Particle*)particles_soa, ce, xi, yi,
+//                    &force_point[0],        (int32)force_point.size(),
+//                    &force_directional[0],  (int32)force_directional.size(),
+//                    &force_box[0],          (int32)force_box.size() );
+//                ispc::sphProcessCollision(
+//                    (ispc::Particle*)particles_soa, ce, xi, yi,
+//                    &collision_spheres[0],  (int32)collision_spheres.size(),
+//                    &collision_planes[0],   (int32)collision_planes.size(),
+//                    &collision_boxes[0],    (int32)collision_boxes.size() );
+//                ispc::sphIntegrate((ispc::Particle*)particles_soa, ce, xi, yi);
+//            }
+//    });
+
+    // impulse
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
         [&](const tbb::blocked_range<int> &r) {
             for(int i=r.begin(); i!=r.end(); ++i) {
@@ -239,10 +317,9 @@ void sphWorld::update(float32 dt)
                 if(n == 0) { continue; }
                 int xi, yi;
                 GenIndex(i, xi, yi);
-                ispc::sphUpdateDensity((ispc::Particle*)particles_soa, ce, xi, yi);
+                ispc::impUpdateVelocity((ispc::Particle*)particles_soa, ce, xi, yi);
             }
     });
-#ifdef SPH_enable_neighbor_density_estimation
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
         [&](const tbb::blocked_range<int> &r) {
             for(int i=r.begin(); i!=r.end(); ++i) {
@@ -250,28 +327,7 @@ void sphWorld::update(float32 dt)
                 if(n == 0) { continue; }
                 int xi, yi;
                 GenIndex(i, xi, yi);
-                ispc::sphUpdateDensity2((ispc::Particle*)particles_soa, ce, xi, yi);
-            }
-    });
-#endif // SPH_enable_neighbor_density_estimation
-    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-        [&](const tbb::blocked_range<int> &r) {
-            for(int i=r.begin(); i!=r.end(); ++i) {
-                int32 n = ce[i].end - ce[i].begin;
-                if(n == 0) { continue; }
-                int xi, yi;
-                GenIndex(i, xi, yi);
-                ispc::sphUpdateForce((ispc::Particle*)particles_soa, ce, xi, yi);
-            }
-    });
-    tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-        [&](const tbb::blocked_range<int> &r) {
-            for(int i=r.begin(); i!=r.end(); ++i) {
-                int32 n = ce[i].end - ce[i].begin;
-                if(n == 0) { continue; }
-                int xi, yi;
-                GenIndex(i, xi, yi);
-                ispc::sphProcessForce(
+                ispc::sphProcessExternalForce(
                     (ispc::Particle*)particles_soa, ce, xi, yi,
                     &force_point[0],        (int32)force_point.size(),
                     &force_directional[0],  (int32)force_directional.size(),
@@ -281,41 +337,9 @@ void sphWorld::update(float32 dt)
                     &collision_spheres[0],  (int32)collision_spheres.size(),
                     &collision_planes[0],   (int32)collision_planes.size(),
                     &collision_boxes[0],    (int32)collision_boxes.size() );
-                ispc::sphIntegrate((ispc::Particle*)particles_soa, ce, xi, yi);
+                ispc::impIntegrate((ispc::Particle*)particles_soa, ce, xi, yi);
             }
     });
-
-    //// impulse
-    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-    //    [&](const tbb::blocked_range<int> &r) {
-    //        for(int i=r.begin(); i!=r.end(); ++i) {
-    //            int32 n = ce[i].end - ce[i].begin;
-    //            if(n == 0) { continue; }
-    //            int xi, yi;
-    //            GenIndex(i, xi, yi);
-    //            ispc::impUpdateVelocity((ispc::Particle*)particles_soa, ce, xi, yi);
-    //        }
-    //});
-    //tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
-    //    [&](const tbb::blocked_range<int> &r) {
-    //        for(int i=r.begin(); i!=r.end(); ++i) {
-    //            int32 n = ce[i].end - ce[i].begin;
-    //            if(n == 0) { continue; }
-    //            int xi, yi;
-    //            GenIndex(i, xi, yi);
-    //            ispc::sphProcessForce(
-    //                (ispc::Particle*)particles_soa, ce, xi, yi,
-    //                &force_point[0],        (int32)force_point.size(),
-    //                &force_directional[0],  (int32)force_directional.size(),
-    //                &force_box[0],          (int32)force_box.size() );
-    //            ispc::sphProcessCollision(
-    //                (ispc::Particle*)particles_soa, ce, xi, yi,
-    //                &collision_spheres[0],  (int32)collision_spheres.size(),
-    //                &collision_planes[0],   (int32)collision_planes.size(),
-    //                &collision_boxes[0],    (int32)collision_boxes.size() );
-    //            ispc::impIntegrate((ispc::Particle*)particles_soa, ce, xi, yi);
-    //        }
-    //});
 
     // SoA -> AoS
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),

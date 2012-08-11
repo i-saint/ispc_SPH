@@ -16,8 +16,7 @@ typedef unsigned int32 uint32;
 #define SPH_PARTICLE_MASS 0.002f
 #define SPH_PARTICLE_VISCOSITY 0.1f
 
-#define IMP_PARTICLE_STIFFNESS 0.2f
-#define IMP_WALL_STIFFNESS 0.5f
+#define IMP_PRESSURE_STIFFNESS 50.0f
 
 
 static uniform float SPH_DENSITY_COEF;
@@ -119,7 +118,7 @@ export void sphProcessCollision(
 }
 #undef repulse
 
-export void sphProcessForce(
+export void sphProcessExternalForce(
     soa<8> Particle all_particles[],
     GridData uniform grid[],
     uniform int32 xi, uniform int32 yi,
@@ -418,47 +417,12 @@ static inline void impComputeParticleInteraction(
     vec3 &accel )
 {
     const uniform float SPH_RCP_PARTICLE_SIZE2 = 1.0f/(SPH_PARTICLE_SIZE*2.0f);
-    vec3 diff = pos2 - pos1;
+    vec3 diff = pos2 - pos1;    
     float d = length3(diff); // float d = length3est(diff); // 何故か est の方が遅くなる
     if(d > 0.0f) { // d==0: 衝突元＆衝突相手が同一
         vec3 dir = diff * SPH_RCP_PARTICLE_SIZE2; // vec3 dir = diff / d;
-        accel += dir * (min(0.0f, d-(SPH_PARTICLE_SIZE*2.0f)) * IMP_PARTICLE_STIFFNESS);
+        accel += dir * (min(0.0f, d-(SPH_PARTICLE_SIZE*2.0f)) * IMP_PRESSURE_STIFFNESS);
     }
-}
-
-static inline void impComputeGravity(
-    vec3 pos1,
-    vec3 &vel1 )
-{
-    // x,y,z=0,0,0 で半径 CENTER_SPHERE_RADIUS の球があるもんとして重力で引っ張る＆衝突判定
-
-    const uniform float CENTER_SPHERE_RADIUS = 3.0f;
-    const uniform float GRAVITY = 0.002f;
-
-    {
-        // 中心の球との衝突判定
-        vec3 diff = -pos1;
-        float d = length3(diff);
-        vec3 dir = diff / d;
-        vel1 += dir * (min(0.0f, d-CENTER_SPHERE_RADIUS) * IMP_WALL_STIFFNESS);
-
-        // 重力加速
-        vel1 += dir * GRAVITY;
-    }
-
-    //const uniform float<4> planes[6] = {
-    //    { 0.0f, 0.0f, 1.0f,-SPH_GRID_SIZE},
-    //    { 0.0f, 0.0f,-1.0f, SPH_GRID_SIZE},
-    //    { 0.0f, 1.0f, 0.0f,-SPH_GRID_SIZE},
-    //    { 0.0f,-1.0f, 0.0f, SPH_GRID_SIZE},
-    //    { 1.0f, 0.0f, 0.0f,-SPH_GRID_SIZE},
-    //    {-1.0f, 0.0f, 0.0f, SPH_GRID_SIZE},
-    //};
-    //for(int i=0; i<0; ++i) {
-    //    vec3 n = planes[i].xyz;
-    //    float d = dot3(n, pos1) + planes[i].w;
-    //    vel1 += n * (min(0.0f, d) * IMP_WALL_STIFFNESS);
-    //}
 }
 
 export void impUpdateVelocity(
@@ -469,6 +433,7 @@ export void impUpdateVelocity(
     uniform const GridData &gd = grid[yi*SPH_GRID_DIV + xi];
     uniform const int32 particle_num = gd.end - gd.begin;
     soa<8> Particle * uniform particles = &all_particles[gd.soai*8];
+    soa<8> Force * uniform forces = &g_forces[gd.soai*8];
 
     uniform const int32 nx_beg = max(xi-1, 0);
     uniform const int32 nx_end = min(xi+1, SPH_GRID_DIV-1);
@@ -477,7 +442,6 @@ export void impUpdateVelocity(
 
     for(uniform int32 i=0; i<particle_num; ++i) {
         uniform vec3 pos1 = get_pos(particles[i]);
-        uniform vec3 vel1 = get_vel(particles[i]);
         vec3 accel = {0.0f, 0.0f, 0.0f};
         for(uniform int32 nyi=ny_beg; nyi<=ny_end; ++nyi) {
             for(uniform int32 nxi=nx_beg; nxi<=nx_end; ++nxi) {
@@ -491,22 +455,9 @@ export void impUpdateVelocity(
             }
         }
 
-        vel1.x  += reduce_add(accel.x);
-        vel1.y  += reduce_add(accel.y);
-        vel1.z  += reduce_add(accel.z);
-        set_vel(particles[i], vel1);
-    }
-    foreach(i=0 ... particle_num) {
-        vec3 pos1 = get_pos(particles[i]);
-        vec3 vel1 = get_vel(particles[i]);
-
-        impComputeGravity(pos1, vel1);
-
-        // 自然減速
-        const uniform float DECELERATE = 0.995;
-        vel1 *= DECELERATE;
-
-        set_vel(particles[i], vel1);
+        forces[i].ax = reduce_add(accel.x);
+        forces[i].ay = reduce_add(accel.y);
+        forces[i].az = reduce_add(accel.z);
     }
 }
 
@@ -518,11 +469,22 @@ export void impIntegrate(
     uniform const GridData &gd = grid[yi*SPH_GRID_DIV + xi];
     uniform const int32 particle_num = gd.end - gd.begin;
     soa<8> Particle * uniform particles = &all_particles[gd.soai*8];
+    soa<8> Force * uniform forces = &g_forces[gd.soai*8];
+
+    uniform const float timestep = 0.01f;
 
     foreach(i=0 ... particle_num) {
         vec3 pos = get_pos(particles[i]);
+        vec3 accel = get_accel(forces[i]);
         vec3 vel = get_vel(particles[i]);
-        pos += vel;
+
+        const uniform float DECELERATE = 0.995;
+        vel += accel * timestep;
+        // 自然減速
+        vel *= DECELERATE;
+
+        pos += vel * timestep;
         set_pos(particles[i], pos);
+        set_vel(particles[i], vel);
     }
 }
