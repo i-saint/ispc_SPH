@@ -178,6 +178,13 @@ void sphWorld::addParticles( sphParticle *p, size_t num )
 void sphWorld::update(float32 dt)
 {
     sphGridData *ce = &cell[0][0];          // 
+    ispc::PointForce       *point_f = force_point.empty() ? NULL : &force_point[0];
+    ispc::DirectionalForce *dir_f   = force_directional.empty() ? NULL : &force_directional[0];
+    ispc::BoxForce         *box_f   = force_box.empty() ? NULL : &force_box[0];
+
+    ispc::Sphere  *point_c = collision_spheres.empty() ? NULL : &collision_spheres[0];
+    ispc::Plane   *plane_c = collision_planes.empty() ? NULL : &collision_planes[0];
+    ispc::Box     *box_c   = collision_boxes.empty() ? NULL : &collision_boxes[0];
 
     // clear grid
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
@@ -329,14 +336,14 @@ void sphWorld::update(float32 dt)
                 GenIndex(i, xi, yi);
                 ispc::sphProcessExternalForce(
                     (ispc::Particle*)particles_soa, ce, xi, yi,
-                    &force_point[0],        (int32)force_point.size(),
-                    &force_directional[0],  (int32)force_directional.size(),
-                    &force_box[0],          (int32)force_box.size() );
+                    point_f, (int32)force_point.size(),
+                    dir_f,   (int32)force_directional.size(),
+                    box_f,   (int32)force_box.size() );
                 ispc::sphProcessCollision(
                     (ispc::Particle*)particles_soa, ce, xi, yi,
-                    &collision_spheres[0],  (int32)collision_spheres.size(),
-                    &collision_planes[0],   (int32)collision_planes.size(),
-                    &collision_boxes[0],    (int32)collision_boxes.size() );
+                    point_c, (int32)collision_spheres.size(),
+                    plane_c, (int32)collision_planes.size(),
+                    box_c,   (int32)collision_boxes.size() );
                 ispc::impIntegrate((ispc::Particle*)particles_soa, ce, xi, yi);
             }
     });
