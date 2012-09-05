@@ -6,6 +6,8 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
+		Master|Win32 = Master|Win32
+		Master|x64 = Master|x64
 		Profile|Win32 = Profile|Win32
 		Profile|x64 = Profile|x64
 		Release|Win32 = Release|Win32
@@ -16,6 +18,10 @@ Global
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Debug|Win32.Build.0 = Debug|Win32
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Debug|x64.ActiveCfg = Debug|x64
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Debug|x64.Build.0 = Debug|x64
+		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Master|Win32.ActiveCfg = Master|Win32
+		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Master|Win32.Build.0 = Master|Win32
+		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Master|x64.ActiveCfg = Master|x64
+		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Master|x64.Build.0 = Master|x64
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Profile|Win32.ActiveCfg = Profile|Win32
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Profile|Win32.Build.0 = Profile|Win32
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Profile|x64.ActiveCfg = Profile|x64

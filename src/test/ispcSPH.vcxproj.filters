@@ -12,11 +12,20 @@
     <Filter Include="SPH">
       <UniqueIdentifier>{b0fb3b64-e40e-4682-9652-9c4611ed7e91}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DynamicObjLoader">
+      <UniqueIdentifier>{342033f3-e37d-42b6-bcdd-cb5cbf349093}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="tasksys.cpp" />
     <ClCompile Include="ispcSPH.cpp" />
     <ClCompile Include="..\SPH_types.cpp">
+      <Filter>SPH</Filter>
+    </ClCompile>
+    <ClCompile Include="DynamicObjLoader\DynamicObjLoader.cpp">
+      <Filter>DynamicObjLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SPH_dol.cpp">
       <Filter>SPH</Filter>
     </ClCompile>
   </ItemGroup>
@@ -43,6 +52,9 @@
     </ClInclude>
     <ClInclude Include="..\SPH_collision.h">
       <Filter>SPH</Filter>
+    </ClInclude>
+    <ClInclude Include="DynamicObjLoader\DynamicObjLoader.h">
+      <Filter>DynamicObjLoader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

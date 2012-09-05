@@ -478,7 +478,7 @@ export void impIntegrate(
         vec3 accel = get_accel(forces[i]);
         vec3 vel = get_vel(particles[i]);
 
-        const uniform float DECELERATE = 0.995;
+        const uniform float DECELERATE = 0.9925f;
         vel += accel * timestep;
         // Ž©‘RŒ¸‘¬
         vel *= DECELERATE;

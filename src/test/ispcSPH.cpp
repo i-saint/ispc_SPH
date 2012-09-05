@@ -6,12 +6,13 @@
 #include <d3dcompiler.h>
 #include <xnamath.h>
 #include <cstdio>
-#include "resource.h"
 #include <tbb/tbb.h>
+#include "resource.h"
 
 
 #include "../SPH_types.h"
 #include "SPH_core_ispc.h"
+#include "DynamicObjLoader.h"
 
 //--------------------------------------------------------------------------------------
 // Structures
@@ -166,16 +167,30 @@ LRESULT CALLBACK    WndProc( HWND, UINT, WPARAM, LPARAM );
 void Render();
 
 
-//--------------------------------------------------------------------------------------
-// Entry point to the program. Initializes everything and goes into a message processing 
-// loop. Idle time is used to render the scene.
-//--------------------------------------------------------------------------------------
 int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow )
 {
     UNREFERENCED_PARAMETER( hPrevInstance );
     UNREFERENCED_PARAMETER( lpCmdLine );
+
+#ifdef _WIN64
+#   define MSBUILD_OPTION "/m /p:Configuration=Release;Platform=x64"
+#   define BUILD_TARGET "x64\\Release"
+#else // _WIN64
+#   define MSBUILD_OPTION "/m /p:Configuration=Release;Platform=Win32"
+#   define BUILD_TARGET "Release"
+#endif // _WIN64
+
+    DOL_AddSourceDirectory("..\\");
+    DOL_StartAutoRecompile(MSBUILD_OPTION, true);
+    DOL_Load(BUILD_TARGET);
+    DOL_Load(BUILD_TARGET "\\SPH_core.obj");
+    DOL_Load(BUILD_TARGET "\\SPH_core_avx.obj");
+    DOL_Load(BUILD_TARGET "\\SPH_core_sse2.obj");
+    DOL_Load(BUILD_TARGET "\\SPH_core_sse4.obj");
+    DOL_Link();
+
     tbb::task_scheduler_init::automatic;
-    ispc::sphInitializeConstants();
+    //tbb::task_scheduler_init init(1); // for debug
 
     if( FAILED( InitWindow( hInstance, nCmdShow ) ) )
         return 0;
@@ -198,11 +213,13 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
         else
         {
             Render();
+            DOL_Update();
         }
     }
 
     CleanupDevice();
 
+    DOL_UnloadAll();
     return ( int )msg.wParam;
 }
 
