@@ -27,6 +27,7 @@
 #ifndef __DynamicObjLoader_h__
 #define __DynamicObjLoader_h__
 
+
 // 一応非 Windows でもビルドエラーにはならないようにしておく
 #if !defined(_WIN32) && !defined(DOL_StaticLink)
 #   define DOL_StaticLink
@@ -40,6 +41,11 @@
 #else // _WIN64
 #   define DOL_Symbol_Prefix "_"
 #endif // _WIN64
+
+#if defined(_CPPRTTI) && !defined(DOL_DisableWarning_RTTI)
+#   pragma message("DOL warning: RTTI が有効なため .obj 側の virtual 関数を正常に呼べません。この警告を無効にするには DOL_DisableWarning_RTTI を define します。\n")
+#endif // _CPPRTTI
+
 
 // obj 側で使います。親 process から参照されるシンボルにつけます。(mangling 問題解決のため)
 #define DOL_Export  extern "C"
