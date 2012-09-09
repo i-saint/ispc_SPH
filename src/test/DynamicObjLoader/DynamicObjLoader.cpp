@@ -17,6 +17,7 @@
 namespace dol {
 
 namespace stl = std;
+typedef unsigned __int64 QWORD, *PQWORD;
 
 const char g_symname_modulemarker[] = DOL_Symbol_Prefix "DOL_ModuleMarker";
 const char g_symname_onload[]       = DOL_Symbol_Prefix "DOL_OnLoadHandler";
@@ -394,8 +395,15 @@ bool ObjFile::link()
         size_t SectionBase = (size_t)(ImageBase + sect.PointerToRawData);
 
         DWORD NumRelocations = sect.NumberOfRelocations;
+        DWORD FirstRelocation = 0;
+        // NumberOfRelocations==0xffff の場合、最初の IMAGE_RELOCATION に実際の値が入っている。(NumberOfRelocations は 16bit のため)
+        if(sect.NumberOfRelocations==0xffff && (sect.Characteristics&IMAGE_SCN_LNK_NRELOC_OVFL)!=0) {
+            NumRelocations = ((PIMAGE_RELOCATION)(ImageBase + sect.PointerToRelocations))[0].RelocCount;
+            FirstRelocation = 1;
+        }
+
         PIMAGE_RELOCATION pRelocation = (PIMAGE_RELOCATION)(ImageBase + sect.PointerToRelocations);
-        for(size_t ri=0; ri<NumRelocations; ++ri) {
+        for(size_t ri=FirstRelocation; ri<NumRelocations; ++ri) {
             PIMAGE_RELOCATION pReloc = pRelocation + ri;
             PIMAGE_SYMBOL rsym = pSymbolTable + pReloc->SymbolTableIndex;
             const char *rname = GetSymbolName(StringTable, rsym);
@@ -413,6 +421,7 @@ bool ObjFile::link()
                 IMAGE_REL32     = IMAGE_REL_AMD64_REL32,
                 IMAGE_DIR32     = IMAGE_REL_AMD64_ADDR32,
                 IMAGE_DIR32NB   = IMAGE_REL_AMD64_ADDR32NB,
+                IMAGE_DIR64     = IMAGE_REL_AMD64_ADDR64,
 #else
                 IMAGE_SECTION   = IMAGE_REL_I386_SECTION,
                 IMAGE_SECREL    = IMAGE_REL_I386_SECREL,
@@ -448,6 +457,13 @@ bool ObjFile::link()
                     *(DWORD*)(addr) = (DWORD)rdata;
                 }
                 break;
+#ifdef _WIN64
+            case IMAGE_DIR64:
+                {
+                    *(QWORD*)(addr) = (QWORD)(m_reloc_bases[addr] + rdata);
+                }
+                break;
+#endif // _WIN64
             default:
                 istPrint("DOL warning: 未知の IMAGE_RELOCATION::Type 0x%x\n", pReloc->Type);
                 break;
@@ -469,7 +485,7 @@ void* ObjFile::findSymbol(const stl::string &name)
 }
 
 
-typedef void (*Handler)();
+typedef void (**Handler)();
 
 
 DynamicObjLoader::DynamicObjLoader()
@@ -529,8 +545,8 @@ bool DynamicObjLoader::load( const stl::string &path, bool dont_ignore )
     return true;
 }
 
-inline void CallOnLoadHandler(ObjFile *obj)   { if(Handler h=(Handler)obj->findSymbol(g_symname_onload))   { h(); } }
-inline void CallOnUnloadHandler(ObjFile *obj) { if(Handler h=(Handler)obj->findSymbol(g_symname_onunload)) { h(); } }
+inline void CallOnLoadHandler(ObjFile *obj)   { if(Handler h=(Handler)obj->findSymbol(g_symname_onload))   { (*h)(); } }
+inline void CallOnUnloadHandler(ObjFile *obj) { if(Handler h=(Handler)obj->findSymbol(g_symname_onunload)) { (*h)(); } }
 
 void DynamicObjLoader::unload(ObjFile *obj)
 {
@@ -759,6 +775,7 @@ public:
         si.cb = sizeof(si);
         if(::CreateProcessA(NULL, (LPSTR)command.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)==TRUE) {
             ::WaitForSingleObject(pi.hProcess, INFINITE);
+            ::Sleep(1000); // 終了直後だとファイルの書き込みが終わってないことがあるっぽい？ので少し待つ…
             m_build_has_just_completed = true;
         }
         istPrint("DOL info: recompile end\n");

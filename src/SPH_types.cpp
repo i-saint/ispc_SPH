@@ -135,52 +135,10 @@ inline void GenIndex(uint32 hash, int32 &xi, int32 &yi)
 
 sphWorld::sphWorld()
     : num_active_particles(0)
-    , particle_lifetime(3600.0f)
+    , particle_lifetime(1800.0f)
 {
     for(uint32 i=0; i<_countof(particles); ++i) {
         particles[i].params.lifetime = 0.0f;
-    }
-
-
-    //{
-    //    ispc::Sphere sphere;
-    //    set_xyz(sphere, 0.0f, 0.0f, 0.0f); sphere.radius = 2.5f;
-    //    collision_spheres.push_back(sphere);
-    //}
-    //{
-    //    ispc::PointForce force;
-    //    set_xyz(force, 0.0f, 0.0f, 0.0f); force.strength = -5.0f;
-    //    force_point.push_back(force);
-    //}
-
-    {
-        ispc::Sphere sphere;
-        set_xyz(sphere, 0.0f, 0.0f, 0.0f); sphere.radius = 1.0f;
-        collision_spheres.push_back(sphere);
-    }
-    {
-        ispc::Plane plane;
-        set_nxyz(plane, 1.0f, 0.0f, 0.0f); plane.distance = SPH_GRID_SIZE;
-        collision_planes.push_back(plane);
-        set_nxyz(plane,-1.0f, 0.0f, 0.0f); plane.distance = SPH_GRID_SIZE;
-        collision_planes.push_back(plane);
-        set_nxyz(plane, 0.0f, 1.0f, 0.0f); plane.distance = SPH_GRID_SIZE;
-        collision_planes.push_back(plane);
-        set_nxyz(plane, 0.0f,-1.0f, 0.0f); plane.distance = SPH_GRID_SIZE;
-        collision_planes.push_back(plane);
-        set_nxyz(plane, 0.0f, 0.0f,-1.0f); plane.distance = 0.0f;
-        collision_planes.push_back(plane);
-    }
-
-    {
-        ispc::PointForce force;
-        set_xyz(force, 0.0f, 0.0f, 0.0f); force.strength = -0.001f;
-        force_point.push_back(force);
-    }
-    {
-        ispc::DirectionalForce force;
-        set_nxyz(force, 0.0f, 0.0f, 1.0f); force.strength = 5.0f;
-        force_directional.push_back(force);
     }
 }
 

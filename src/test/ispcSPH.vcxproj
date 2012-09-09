@@ -505,6 +505,7 @@
   <ItemGroup>
     <ClCompile Include="..\SPH_dol.cpp" />
     <ClCompile Include="..\SPH_types.cpp" />
+    <ClCompile Include="collision.cpp" />
     <ClCompile Include="DynamicObjLoader\DynamicObjLoader.cpp" />
     <ClCompile Include="ispcSPH.cpp" />
     <ClCompile Include="tasksys.cpp" />

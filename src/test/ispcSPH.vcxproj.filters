@@ -28,6 +28,7 @@
     <ClCompile Include="..\SPH_dol.cpp">
       <Filter>SPH</Filter>
     </ClCompile>
+    <ClCompile Include="collision.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Tutorial07.fx">

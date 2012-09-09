@@ -14,6 +14,8 @@
 #include "SPH_core_ispc.h"
 #include "DynamicObjLoader.h"
 
+DOL_ImportFunction(void, InitializeCollisions, ());
+
 //--------------------------------------------------------------------------------------
 // Structures
 //--------------------------------------------------------------------------------------
@@ -184,9 +186,7 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
     DOL_StartAutoRecompile(MSBUILD_OPTION, true);
     DOL_Load(BUILD_TARGET);
     DOL_Load(BUILD_TARGET "\\SPH_core.obj");
-    DOL_Load(BUILD_TARGET "\\SPH_core_avx.obj");
     DOL_Load(BUILD_TARGET "\\SPH_core_sse2.obj");
-    DOL_Load(BUILD_TARGET "\\SPH_core_sse4.obj");
     DOL_Link();
 
     tbb::task_scheduler_init::automatic;
@@ -200,6 +200,7 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
         CleanupDevice();
         return 0;
     }
+    InitializeCollisions();
 
     // Main message loop
     MSG msg = {0};
@@ -248,7 +249,7 @@ HRESULT InitWindow( HINSTANCE hInstance, int nCmdShow )
 
     // Create window
     g_hInst = hInstance;
-    RECT rc = { 0, 0, 1024, 768 };
+    RECT rc = { 0, 0, 500, 500 };
     AdjustWindowRect( &rc, WS_OVERLAPPEDWINDOW, FALSE );
     g_hWnd = CreateWindow( L"ispc_SPH_class", L"ispc test", WS_OVERLAPPEDWINDOW,
                            CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, NULL, NULL, hInstance,
