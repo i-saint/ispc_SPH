@@ -12,9 +12,8 @@
 
 #include "../SPH_types.h"
 #include "SPH_core_ispc.h"
-#include "DynamicObjLoader.h"
 
-DOL_ImportFunction(void, InitializeCollisions, ());
+void InitializeCollisions();
 
 //--------------------------------------------------------------------------------------
 // Structures
@@ -182,13 +181,6 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 #   define BUILD_TARGET "Release"
 #endif // _WIN64
 
-    DOL_AddSourceDirectory("..\\");
-    DOL_StartAutoRecompile(MSBUILD_OPTION, true);
-    DOL_Load(BUILD_TARGET);
-    DOL_Load(BUILD_TARGET "\\SPH_core.obj");
-    DOL_Load(BUILD_TARGET "\\SPH_core_sse2.obj");
-    DOL_Link();
-
     tbb::task_scheduler_init::automatic;
     //tbb::task_scheduler_init init(1); // for debug
 
@@ -214,13 +206,11 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
         else
         {
             Render();
-            DOL_Update();
         }
     }
 
     CleanupDevice();
 
-    DOL_UnloadAll();
     return ( int )msg.wParam;
 }
 

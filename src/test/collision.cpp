@@ -1,13 +1,9 @@
 ﻿#include "../SPH_types.h"
-#include "DynamicObjLoader.h"
 
 extern sphWorld         g_sphgrid;
 
 
-DOL_Module
-
-
-DOL_Export void InitializeCollisions()
+void InitializeCollisions()
 {
     //{
     //    ispc::Sphere sphere;
@@ -50,7 +46,3 @@ DOL_Export void InitializeCollisions()
         g_sphgrid.force_directional.push_back(force);
     }
 }
-
-
-DOL_OnLoad({
-})

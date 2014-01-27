@@ -1,8 +1,5 @@
 #include "SPH_types.h"
-#include "DynamicObjLoader.h"
 
-
-DOL_Module
 
 DOL_Export void impIntegrateDOL(ispc::Particle * all_particles, ispc::GridData * grid, int32_t xi, int32_t yi)
 {
@@ -52,9 +49,3 @@ DOL_Export void sphUpdateForceDOL(ispc::Particle * all_particles, ispc::GridData
     ispc::sphUpdateForce(all_particles, grid, xi, yi);
 }
 
-
-DOL_OnLoad({
-})
-    
-DOL_OnUnload({
-})

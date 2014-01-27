@@ -503,10 +503,8 @@
   </ItemDefinitionGroup>
   <ItemGroup />
   <ItemGroup>
-    <ClCompile Include="..\SPH_dol.cpp" />
     <ClCompile Include="..\SPH_types.cpp" />
     <ClCompile Include="collision.cpp" />
-    <ClCompile Include="DynamicObjLoader\DynamicObjLoader.cpp" />
     <ClCompile Include="ispcSPH.cpp" />
     <ClCompile Include="tasksys.cpp" />
   </ItemGroup>
@@ -554,7 +552,6 @@
     <ClInclude Include="..\SPH_collision.h" />
     <ClInclude Include="..\SPH_const.h" />
     <ClInclude Include="..\SPH_types.h" />
-    <ClInclude Include="DynamicObjLoader\DynamicObjLoader.h" />
     <CLInclude Include="resource.h" />
     <ResourceCompile Include="ispcSPH.rc" />
   </ItemGroup>

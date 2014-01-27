@@ -2,23 +2,6 @@
 #include "SPH_types.h"
 #include <tbb/tbb.h>
 #include <algorithm>
-#include "DynamicObjLoader.h"
-
-DOL_ImportFunction(void, impIntegrateDOL, (ispc::Particle * all_particles, ispc::GridData * grid, int32_t xi, int32_t yi));
-DOL_ImportFunction(void, impUpdateVelocityDOL, (ispc::Particle * all_particles, ispc::GridData * grid, int32_t xi, int32_t yi));
-DOL_ImportFunction(void, sphInitializeConstantsDOL, ());
-DOL_ImportFunction(void, sphIntegrateDOL, (ispc::Particle * all_particles, ispc::GridData * grid, int32_t xi, int32_t yi));
-DOL_ImportFunction(void, sphProcessCollisionDOL, (
-    ispc::Particle * all_particles, ispc::GridData * grid, int32_t xi, int32_t yi,
-    ispc::Sphere * spheres, int32_t num_spheres,
-    ispc::Plane * planes, int32_t num_planes,
-    ispc::Box * boxes, int32_t num_boxes ));
-DOL_ImportFunction(void, sphProcessExternalForceDOL, (
-    ispc::Particle * all_particles, ispc::GridData * grid, int32_t xi, int32_t yi,
-    ispc::PointForce * pforce, int32_t num_pforce,
-    ispc::DirectionalForce * dforce, int32_t num_dforce,
-    ispc::BoxForce * bforce, int32_t num_bforce ));
-DOL_ImportFunction(void, sphUpdateDensityDOL, (ispc::Particle * all_particles, ispc::GridData * grid, int32_t xi, int32_t yi));
 
 
 
@@ -163,7 +146,7 @@ void sphWorld::update(float32 dt)
     ispc::Plane   *plane_c = collision_planes.empty() ? NULL : &collision_planes[0];
     ispc::Box     *box_c   = collision_boxes.empty() ? NULL : &collision_boxes[0];
 
-    sphInitializeConstantsDOL();
+    ispc::sphInitializeConstants();
 
     // clear grid
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
@@ -303,7 +286,7 @@ void sphWorld::update(float32 dt)
                 if(n == 0) { continue; }
                 int xi, yi;
                 GenIndex(i, xi, yi);
-                impUpdateVelocityDOL((ispc::Particle*)particles_soa, ce, xi, yi);
+                ispc::impUpdateVelocity((ispc::Particle*)particles_soa, ce, xi, yi);
             }
     });
     tbb::parallel_for(tbb::blocked_range<int>(0, SPH_GRID_CELL_NUM, 128),
@@ -313,17 +296,17 @@ void sphWorld::update(float32 dt)
                 if(n == 0) { continue; }
                 int xi, yi;
                 GenIndex(i, xi, yi);
-                sphProcessExternalForceDOL(
+                ispc::sphProcessExternalForce(
                     (ispc::Particle*)particles_soa, ce, xi, yi,
                     point_f, (int32)force_point.size(),
                     dir_f,   (int32)force_directional.size(),
                     box_f,   (int32)force_box.size() );
-                sphProcessCollisionDOL(
+                ispc::sphProcessCollision(
                     (ispc::Particle*)particles_soa, ce, xi, yi,
                     point_c, (int32)collision_spheres.size(),
                     plane_c, (int32)collision_planes.size(),
                     box_c,   (int32)collision_boxes.size() );
-                impIntegrateDOL((ispc::Particle*)particles_soa, ce, xi, yi);
+                ispc::impIntegrate((ispc::Particle*)particles_soa, ce, xi, yi);
             }
     });
 
